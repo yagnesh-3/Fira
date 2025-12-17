@@ -1,0 +1,99 @@
+'use client';
+
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { authApi } from '@/lib/api';
+import { User } from '@/lib/types';
+
+interface AuthContextType {
+    user: User | null;
+    token: string | null;
+    isLoading: boolean;
+    isAuthenticated: boolean;
+    login: (email: string, password: string) => Promise<void>;
+    register: (data: { email: string; password: string; name: string; role?: string }) => Promise<void>;
+    logout: () => void;
+    updateUser: (user: User) => void;
+}
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+    const [user, setUser] = useState<User | null>(null);
+    const [token, setToken] = useState<string | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
+
+    // Load user from localStorage on mount
+    useEffect(() => {
+        const storedToken = localStorage.getItem('fira_token');
+        const storedUser = localStorage.getItem('fira_user');
+
+        if (storedToken && storedUser) {
+            setToken(storedToken);
+            try {
+                setUser(JSON.parse(storedUser));
+            } catch {
+                localStorage.removeItem('fira_user');
+            }
+        }
+        setIsLoading(false);
+    }, []);
+
+    const login = useCallback(async (email: string, password: string) => {
+        const response = await authApi.login({ email, password });
+        const userData = response.user as User;
+        const authToken = response.token;
+
+        setUser(userData);
+        setToken(authToken);
+        localStorage.setItem('fira_token', authToken);
+        localStorage.setItem('fira_user', JSON.stringify(userData));
+    }, []);
+
+    const register = useCallback(async (data: { email: string; password: string; name: string; role?: string }) => {
+        const response = await authApi.register(data);
+        const userData = response.user as User;
+        const authToken = response.token;
+
+        setUser(userData);
+        setToken(authToken);
+        localStorage.setItem('fira_token', authToken);
+        localStorage.setItem('fira_user', JSON.stringify(userData));
+    }, []);
+
+    const logout = useCallback(() => {
+        setUser(null);
+        setToken(null);
+        localStorage.removeItem('fira_token');
+        localStorage.removeItem('fira_user');
+    }, []);
+
+    const updateUser = useCallback((updatedUser: User) => {
+        setUser(updatedUser);
+        localStorage.setItem('fira_user', JSON.stringify(updatedUser));
+    }, []);
+
+    return (
+        <AuthContext.Provider
+            value={{
+                user,
+                token,
+                isLoading,
+                isAuthenticated: !!user && !!token,
+                login,
+                register,
+                logout,
+                updateUser,
+            }}
+        >
+            {children}
+        </AuthContext.Provider>
+    );
+}
+
+export function useAuth() {
+    const context = useContext(AuthContext);
+    if (context === undefined) {
+        throw new Error('useAuth must be used within an AuthProvider');
+    }
+    return context;
+}
