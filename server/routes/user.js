@@ -1,0 +1,65 @@
+const express = require('express');
+const router = express.Router();
+const userService = require('../services/userService');
+
+// GET /api/users - Get all users (admin only)
+router.get('/', async (req, res) => {
+    try {
+        const users = await userService.getAllUsers(req.query);
+        res.json(users);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// GET /api/users/:id - Get user by ID
+router.get('/:id', async (req, res) => {
+    try {
+        const user = await userService.getUserById(req.params.id);
+        res.json(user);
+    } catch (error) {
+        res.status(404).json({ error: error.message });
+    }
+});
+
+// PUT /api/users/:id - Update user
+router.put('/:id', async (req, res) => {
+    try {
+        const user = await userService.updateUser(req.params.id, req.body);
+        res.json(user);
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+});
+
+// DELETE /api/users/:id - Delete user
+router.delete('/:id', async (req, res) => {
+    try {
+        await userService.deleteUser(req.params.id);
+        res.json({ message: 'User deleted successfully' });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// POST /api/users/:id/follow - Follow a user
+router.post('/:id/follow', async (req, res) => {
+    try {
+        const result = await userService.followUser(req.body.userId, req.params.id);
+        res.json(result);
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+});
+
+// POST /api/users/:id/unfollow - Unfollow a user
+router.post('/:id/unfollow', async (req, res) => {
+    try {
+        const result = await userService.unfollowUser(req.body.userId, req.params.id);
+        res.json(result);
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+});
+
+module.exports = router;

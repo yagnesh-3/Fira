@@ -1,15 +1,11 @@
 const mongoose = require('mongoose');
-require('dotenv').config();
 
 const connectDB = async () => {
     try {
-        const conn = await mongoose.connect(process.env.MONGODB_URI, {
-            // Mongoose 6+ no longer needs these options, but keeping for compatibility
-        });
-        console.log(`MongoDB Connected: ${conn.connection.host}`);
-        return conn;
+        await mongoose.connect(process.env.MONGODB_URI);
+        console.log('✅ MongoDB Connected Successfully');
     } catch (error) {
-        console.error(`MongoDB Connection Error: ${error.message}`);
+        console.error('❌ MongoDB Connection Error:', error.message);
         process.exit(1);
     }
 };

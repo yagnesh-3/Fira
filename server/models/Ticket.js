@@ -82,7 +82,6 @@ ticketSchema.pre('save', function (next) {
 });
 
 // Indexes
-ticketSchema.index({ ticketId: 1 });
 ticketSchema.index({ user: 1 });
 ticketSchema.index({ event: 1 });
 ticketSchema.index({ status: 1 });
