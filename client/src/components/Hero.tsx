@@ -45,7 +45,7 @@ export default function Hero() {
                         </div>
 
                         {/* Main FIRA - Bigger and bolder */}
-                        <h1 className="text-[120px] sm:text-[140px] md:text-[180px] lg:text-[220px] font-black text-white leading-[0.85] tracking-[-0.03em]">
+                        <h1 className="text-[120px] sm:text-[140px] md:text-[180px] lg:text-[220px] font-black text-white leading-[0.85] tracking-[-0.03em] font-fascinate">
                             FIRA
                         </h1>
                     </div>
