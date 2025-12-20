@@ -7,6 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import DashboardLayout from '@/components/dashboard/DashboardLayout';
 import { Button } from '@/components/ui';
 import { eventsApi, ticketsApi } from '@/lib/api';
+import FilterDropdown from '@/components/ui/FilterDropdown';
 
 interface Event {
     _id: string;
@@ -32,7 +33,7 @@ interface Ticket {
 export default function EventsPage() {
     const router = useRouter();
     const { isAuthenticated, isLoading, user } = useAuth();
-    const [activeTab, setActiveTab] = useState<'attending' | 'organizing'>('attending');
+    const [activeTab, setActiveTab] = useState<'all' | 'attending' | 'organizing'>('all');
     const [attendingEvents, setAttendingEvents] = useState<Event[]>([]);
     const [organizingEvents, setOrganizingEvents] = useState<Event[]>([]);
     const [loading, setLoading] = useState(true);
@@ -52,11 +53,14 @@ export default function EventsPage() {
                 setError('');
 
                 // Fetch organizing events
-                const orgEvents = await eventsApi.getUserEvents(user._id) as Event[];
+                const orgResponse = await eventsApi.getUserEvents(user._id) as Event[] | { events?: Event[]; data?: Event[] };
+                // Handle if API returns { events: [...] } or direct array
+                const orgEvents = Array.isArray(orgResponse) ? orgResponse : ((orgResponse as { events?: Event[]; data?: Event[] })?.events || (orgResponse as { events?: Event[]; data?: Event[] })?.data || []);
                 setOrganizingEvents(orgEvents);
 
                 // Fetch attending events (from tickets)
-                const tickets = await ticketsApi.getUserTickets(user._id) as Ticket[];
+                const ticketsResponse = await ticketsApi.getUserTickets(user._id) as Ticket[] | { tickets?: Ticket[]; data?: Ticket[] };
+                const tickets = Array.isArray(ticketsResponse) ? ticketsResponse : ((ticketsResponse as { tickets?: Ticket[]; data?: Ticket[] })?.tickets || (ticketsResponse as { tickets?: Ticket[]; data?: Ticket[] })?.data || []);
                 const attending = tickets
                     .filter(t => t.status === 'active' && t.event)
                     .map(t => t.event);
@@ -91,37 +95,29 @@ export default function EventsPage() {
         });
     };
 
-    const currentEvents = activeTab === 'attending' ? attendingEvents : organizingEvents;
+    const allEvents = [...attendingEvents, ...organizingEvents];
+    const currentEvents = activeTab === 'all' ? allEvents : activeTab === 'attending' ? attendingEvents : organizingEvents;
 
     return (
         <DashboardLayout>
             <div className="p-6 lg:p-8">
-                {/* Header */}
-                <div className="mb-8">
-                    <h1 className="text-3xl font-bold text-white mb-2">My Events</h1>
-                    <p className="text-gray-400">Events you&apos;re attending or organizing</p>
-                </div>
+                {/* Header with Filter */}
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+                    <div>
+                        <h1 className="text-3xl font-bold text-white mb-1">My Events</h1>
+                        <p className="text-gray-400">Events you&apos;re attending or organizing</p>
+                    </div>
 
-                {/* Tabs */}
-                <div className="flex gap-2 mb-8">
-                    <button
-                        onClick={() => setActiveTab('attending')}
-                        className={`px-5 py-2.5 rounded-full text-sm font-medium transition-all duration-200 ${activeTab === 'attending'
-                            ? 'bg-white text-black shadow-lg shadow-white/10'
-                            : 'bg-white/[0.04] text-gray-400 hover:bg-white/[0.08] hover:text-white border border-white/[0.08]'
-                            }`}
-                    >
-                        Attending ({attendingEvents.length})
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('organizing')}
-                        className={`px-5 py-2.5 rounded-full text-sm font-medium transition-all duration-200 ${activeTab === 'organizing'
-                            ? 'bg-gradient-to-r from-violet-500 to-pink-500 text-white shadow-lg shadow-violet-500/20'
-                            : 'bg-white/[0.04] text-gray-400 hover:bg-white/[0.08] hover:text-white border border-white/[0.08]'
-                            }`}
-                    >
-                        Organizing ({organizingEvents.length})
-                    </button>
+                    <FilterDropdown
+                        label="View:"
+                        value={activeTab}
+                        onChange={(val) => setActiveTab(val as 'all' | 'attending' | 'organizing')}
+                        options={[
+                            { value: 'all', label: `All (${attendingEvents.length + organizingEvents.length})` },
+                            { value: 'attending', label: `Attending (${attendingEvents.length})` },
+                            { value: 'organizing', label: `Organizing (${organizingEvents.length})` },
+                        ]}
+                    />
                 </div>
 
                 {/* Loading State */}

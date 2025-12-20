@@ -60,9 +60,7 @@ export default function DashboardPage() {
     }, [isLoading, isAuthenticated, router]);
 
     useEffect(() => {
-        console.log(isAuthenticated, user?._id);
         const fetchDashboardData = async () => {
-            console.log(user);
             if (!user?._id) return;
             try {
                 setLoading(true);
@@ -74,7 +72,6 @@ export default function DashboardPage() {
                     notificationsApi.getUserNotifications(user._id).catch(() => []) as Promise<Notification[]>,
                     eventsApi.getUserEvents(user._id).catch(() => []) as Promise<Event[]>,
                 ]);
-                console.log(tickets, bookings, notifications, events);
                 
                 const activeTickets = tickets.filter((t: Ticket) => t.status === 'active');
                 const upcomingEvents = activeTickets.filter((t: Ticket) => new Date(t.event?.date) > new Date());

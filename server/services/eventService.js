@@ -4,11 +4,12 @@ const PrivateEventAccess = require('../models/PrivateEventAccess');
 const eventService = {
     // Get all events
     async getAllEvents(query = {}) {
-        const { page = 1, limit = 10, eventType, status, category } = query;
+        const { page = 1, limit = 10, eventType, status, category, organizer } = query;
         const filter = {};
         if (eventType) filter.eventType = eventType;
         if (status) filter.status = status;
         if (category) filter.category = category;
+        if (organizer) filter.organizer = organizer; // Filter by organizer if provided
 
         const events = await Event.find(filter)
             .populate('organizer', 'name email verificationBadge')

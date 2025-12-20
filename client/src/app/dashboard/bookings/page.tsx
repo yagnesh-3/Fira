@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import DashboardLayout from '@/components/dashboard/DashboardLayout';
 import { Button } from '@/components/ui';
 import { bookingsApi } from '@/lib/api';
+import FilterDropdown from '@/components/ui/FilterDropdown';
 
 type BookingStatus = 'all' | 'pending' | 'confirmed' | 'completed' | 'cancelled';
 
@@ -107,26 +108,25 @@ export default function BookingsPage() {
     return (
         <DashboardLayout>
             <div className="p-6 lg:p-8">
-                {/* Header */}
-                <div className="mb-8">
-                    <h1 className="text-3xl font-bold text-white mb-2">My Bookings</h1>
-                    <p className="text-gray-400">Manage your venue bookings and reservations</p>
-                </div>
+                {/* Header with Filter */}
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+                    <div>
+                        <h1 className="text-3xl font-bold text-white mb-1">My Bookings</h1>
+                        <p className="text-gray-400">Manage your venue bookings and reservations</p>
+                    </div>
 
-                {/* Filter Tabs */}
-                <div className="flex gap-2 mb-8 flex-wrap">
-                    {(['all', 'pending', 'confirmed', 'completed', 'cancelled'] as BookingStatus[]).map((status) => (
-                        <button
-                            key={status}
-                            onClick={() => setStatusFilter(status)}
-                            className={`px-4 py-2 rounded-full text-sm font-medium capitalize transition-all duration-200 ${statusFilter === status
-                                ? 'bg-white text-black shadow-lg shadow-white/10'
-                                : 'bg-white/[0.04] text-gray-400 hover:bg-white/[0.08] hover:text-white border border-white/[0.08]'
-                                }`}
-                        >
-                            {status}
-                        </button>
-                    ))}
+                    <FilterDropdown
+                        label="Status:"
+                        value={statusFilter}
+                        onChange={(val) => setStatusFilter(val as BookingStatus)}
+                        options={[
+                            { value: 'all', label: 'All Bookings' },
+                            { value: 'pending', label: 'Pending' },
+                            { value: 'confirmed', label: 'Confirmed' },
+                            { value: 'completed', label: 'Completed' },
+                            { value: 'cancelled', label: 'Cancelled' },
+                        ]}
+                    />
                 </div>
 
                 {/* Loading State */}
