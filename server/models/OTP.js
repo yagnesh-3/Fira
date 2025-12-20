@@ -35,9 +35,6 @@ const otpSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Index for automatic cleanup of expired OTPs
-otpSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
-
 // Index for faster email lookups
 otpSchema.index({ email: 1, verified: 1 });
 

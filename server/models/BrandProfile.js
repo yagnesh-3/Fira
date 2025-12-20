@@ -72,7 +72,6 @@ const brandProfileSchema = new mongoose.Schema({
 });
 
 // Indexes
-brandProfileSchema.index({ user: 1 });
 brandProfileSchema.index({ type: 1 });
 brandProfileSchema.index({ location: '2dsphere' });
 brandProfileSchema.index({ name: 'text', bio: 'text' });

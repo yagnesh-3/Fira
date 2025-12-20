@@ -84,11 +84,11 @@ export default function TicketsPage() {
                     {mockTickets.map((ticket) => (
                         <div
                             key={ticket.id}
-                            className="bg-white/[0.02] border border-white/[0.05] rounded-2xl overflow-hidden hover:bg-white/[0.04] transition-all"
+                            className="bg-white/[0.02] backdrop-blur-sm border border-white/[0.08] rounded-2xl overflow-hidden hover:bg-white/[0.04] hover:border-white/[0.12] transition-all duration-300"
                         >
                             <div className="flex flex-col md:flex-row">
                                 {/* QR Code Section */}
-                                <div className="md:w-48 p-6 bg-white/[0.02] flex items-center justify-center border-b md:border-b-0 md:border-r border-white/[0.05]">
+                                <div className="md:w-48 p-6 bg-white/[0.03] flex items-center justify-center border-b md:border-b-0 md:border-r border-white/[0.08]">
                                     <div className="w-32 h-32 bg-white rounded-xl flex items-center justify-center">
                                         <div className="text-center">
                                             <svg className="w-16 h-16 text-gray-800 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -106,8 +106,8 @@ export default function TicketsPage() {
                                             <div className="flex items-center gap-2 mb-2">
                                                 <h3 className="text-lg font-semibold text-white">{ticket.eventName}</h3>
                                                 <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${ticket.status === 'active'
-                                                        ? 'bg-green-500/20 text-green-400'
-                                                        : 'bg-gray-500/20 text-gray-400'
+                                                    ? 'bg-green-500/20 text-green-400'
+                                                    : 'bg-gray-500/20 text-gray-400'
                                                     }`}>
                                                     {ticket.status === 'active' ? 'Valid' : 'Used'}
                                                 </span>

@@ -93,9 +93,9 @@ export default function DashboardPage() {
                     {quickStats.map((stat) => (
                         <div
                             key={stat.label}
-                            className="bg-white/[0.02] border border-white/[0.05] rounded-2xl p-5 hover:bg-white/[0.04] transition-all"
+                            className="bg-white/[0.02] backdrop-blur-sm border border-white/[0.08] rounded-2xl p-5 hover:bg-white/[0.04] hover:border-white/[0.12] transition-all duration-300 group"
                         >
-                            <div className={`w-12 h-12 rounded-xl ${colorClasses[stat.color]} flex items-center justify-center mb-4`}>
+                            <div className={`w-12 h-12 rounded-xl ${colorClasses[stat.color]} flex items-center justify-center mb-4 group-hover:scale-105 transition-transform`}>
                                 {getIcon(stat.icon)}
                             </div>
                             <div className="text-2xl font-bold text-white mb-1">{stat.value}</div>
@@ -105,7 +105,7 @@ export default function DashboardPage() {
                 </div>
 
                 {/* Quick Actions */}
-                <div className="bg-white/[0.02] border border-white/[0.05] rounded-2xl p-6 mb-8">
+                <div className="bg-white/[0.02] backdrop-blur-sm border border-white/[0.08] rounded-2xl p-6 mb-8">
                     <h2 className="text-lg font-semibold text-white mb-4">Quick Actions</h2>
                     <div className="flex flex-wrap gap-3">
                         <Link href="/create/event">
@@ -147,14 +147,14 @@ export default function DashboardPage() {
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {/* Recent Activity */}
-                    <div className="bg-white/[0.02] border border-white/[0.05] rounded-2xl p-6">
+                    <div className="bg-white/[0.02] backdrop-blur-sm border border-white/[0.08] rounded-2xl p-6">
                         <h2 className="text-lg font-semibold text-white mb-4">Recent Activity</h2>
                         <div className="space-y-4">
                             {recentActivity.map((activity, index) => (
                                 <div key={index} className="flex items-start gap-4">
                                     <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${activity.type === 'ticket' ? 'bg-green-500/20 text-green-400' :
-                                            activity.type === 'booking' ? 'bg-blue-500/20 text-blue-400' :
-                                                'bg-violet-500/20 text-violet-400'
+                                        activity.type === 'booking' ? 'bg-blue-500/20 text-blue-400' :
+                                            'bg-violet-500/20 text-violet-400'
                                         }`}>
                                         {activity.type === 'ticket' && (
                                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -185,7 +185,7 @@ export default function DashboardPage() {
                     </div>
 
                     {/* Upcoming Events */}
-                    <div className="bg-white/[0.02] border border-white/[0.05] rounded-2xl p-6">
+                    <div className="bg-white/[0.02] backdrop-blur-sm border border-white/[0.08] rounded-2xl p-6">
                         <h2 className="text-lg font-semibold text-white mb-4">Your Upcoming Events</h2>
                         <div className="space-y-4">
                             <div className="flex items-center gap-4 p-3 rounded-xl bg-white/[0.02] border border-white/[0.05]">
