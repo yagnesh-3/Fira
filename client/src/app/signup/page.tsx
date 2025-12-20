@@ -270,13 +270,13 @@ export default function SignUpPage() {
 
 
                                     <Button
-                                        type="button"
+                                        type="submit"
                                         variant="primary"
                                         size="lg"
-                                        className="w-full opacity-50 cursor-not-allowed"
-                                        disabled
+                                        className="w-full"
+                                        isLoading={isLoading}
                                     >
-                                        Create Account (Coming Soon)
+                                        Create Account
                                     </Button>
                                 </form>
 

@@ -50,14 +50,14 @@ export default function Navbar() {
                             </Link>
                         </div>
 
-                        {/* Auth Buttons - Disabled for now */}
+                        {/* Auth Buttons */}
                         <div className="hidden md:flex items-center space-x-3">
-                            <span className="text-gray-500 cursor-not-allowed text-sm">
+                            <Link href="/signin" className="text-gray-400 hover:text-white transition-colors text-sm">
                                 Sign In
-                            </span>
-                            <span className="bg-gray-600 text-gray-400 cursor-not-allowed px-4 py-1.5 rounded-full text-sm">
+                            </Link>
+                            <Link href="/signup" className="bg-white text-black hover:bg-gray-200 transition-colors px-4 py-1.5 rounded-full text-sm font-medium">
                                 Get Started
-                            </span>
+                            </Link>
                         </div>
 
                         {/* Mobile Menu Button */}
@@ -93,12 +93,12 @@ export default function Navbar() {
                                 Brands
                             </Link>
                             <div className="pt-3 flex flex-col space-y-2 border-t border-white/10">
-                                <span className="text-gray-500 cursor-not-allowed text-sm py-1">
+                                <Link href="/signin" className="text-gray-400 hover:text-white transition-colors text-sm py-1">
                                     Sign In
-                                </span>
-                                <span className="bg-gray-600 text-gray-400 cursor-not-allowed px-4 py-2 rounded-full text-sm text-center">
+                                </Link>
+                                <Link href="/signup" className="bg-white text-black hover:bg-gray-200 transition-colors px-4 py-2 rounded-full text-sm text-center font-medium">
                                     Get Started
-                                </span>
+                                </Link>
                             </div>
                         </div>
                     </div>
