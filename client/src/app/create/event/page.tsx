@@ -7,12 +7,13 @@ import PartyBackground from '@/components/PartyBackground';
 import { Button, Input } from '@/components/ui';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/ui/Toast';
+import { eventsApi, venuesApi, uploadApi } from '@/lib/api';
 
 const categories = ['party', 'concert', 'wedding', 'corporate', 'birthday', 'festival', 'other'];
 
 export default function CreateEventPage() {
     const router = useRouter();
-    const { isAuthenticated, isLoading } = useAuth();
+    const { isAuthenticated, isLoading, user } = useAuth();
     const { showToast } = useToast();
     const [step, setStep] = useState(1);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -29,7 +30,13 @@ export default function CreateEventPage() {
         ticketType: 'free' as 'free' | 'paid',
         ticketPrice: 0,
         maxAttendees: 100,
+        termsAndConditions: '',
+        images: [] as string[],
     });
+    const [venues, setVenues] = useState<{ _id: string; name: string }[]>([]);
+    const [loadingVenues, setLoadingVenues] = useState(true);
+    const [coverImageFile, setCoverImageFile] = useState<File | null>(null);
+    const [coverImagePreview, setCoverImagePreview] = useState<string>('');
 
     useEffect(() => {
         // Only redirect if auth check is complete AND user is not authenticated
@@ -38,21 +45,76 @@ export default function CreateEventPage() {
         }
     }, [isLoading, isAuthenticated, router]);
 
+    // Fetch venues on mount
+    useEffect(() => {
+        const fetchVenues = async () => {
+            try {
+                const response = await venuesApi.getAll() as { venues?: { _id: string; name: string }[] } | { _id: string; name: string }[];
+                const venueList = Array.isArray(response) ? response : (response?.venues || []);
+                setVenues(venueList);
+            } catch (err) {
+                console.error('Failed to fetch venues:', err);
+            } finally {
+                setLoadingVenues(false);
+            }
+        };
+        fetchVenues();
+    }, []);
+
     const handleSubmit = async () => {
+        if (!user?._id) {
+            showToast('Please sign in to create an event', 'error');
+            return;
+        }
+        if (!formData.venueId) {
+            showToast('Please select a venue', 'error');
+            return;
+        }
+        if (!formData.name || !formData.description || !formData.date || !formData.startTime || !formData.endTime) {
+            showToast('Please fill in all required fields', 'error');
+            return;
+        }
+
         setIsSubmitting(true);
         try {
-            // Simulate API call
-            await new Promise(resolve => setTimeout(resolve, 1500));
+            // Upload image if selected
+            let imageUrls: string[] = [];
+            if (coverImageFile) {
+                showToast('Uploading image...', 'info');
+                const uploadResult = await uploadApi.single(coverImageFile, 'events');
+                imageUrls = [uploadResult.url];
+            }
+
+            const eventData = {
+                organizer: user._id,
+                venue: formData.venueId,
+                name: formData.name,
+                description: formData.description,
+                category: formData.category,
+                date: formData.date,
+                startTime: formData.startTime,
+                endTime: formData.endTime,
+                eventType: formData.eventType,
+                ticketType: formData.ticketType,
+                ticketPrice: formData.ticketType === 'paid' ? formData.ticketPrice : 0,
+                maxAttendees: formData.maxAttendees,
+                termsAndConditions: formData.termsAndConditions || null,
+                images: imageUrls,
+                status: 'upcoming',
+            };
+
+            await eventsApi.create(eventData);
             showToast('Event created successfully!', 'success');
             router.push('/dashboard/events');
-        } catch {
-            showToast('Failed to create event', 'error');
+        } catch (err) {
+            const errorMessage = err instanceof Error ? err.message : 'Failed to create event';
+            showToast(errorMessage, 'error');
         } finally {
             setIsSubmitting(false);
         }
     };
 
-    // Show loading only while isLoading is true
+    // Show loading while auth is being checked
     if (isLoading) {
         return (
             <>
@@ -65,9 +127,20 @@ export default function CreateEventPage() {
         );
     }
 
-    // If not authenticated after loading, return null (redirect will happen)
+    // Redirect happens in useEffect, just don't render the form while not authenticated
     if (!isAuthenticated) {
-        return null;
+        return (
+            <>
+                <PartyBackground />
+                <Navbar />
+                <main className="min-h-screen flex items-center justify-center">
+                    <div className="text-center">
+                        <p className="text-gray-400 mb-4">Redirecting to sign in...</p>
+                        <div className="animate-spin w-6 h-6 border-2 border-violet-500 border-t-transparent rounded-full mx-auto" />
+                    </div>
+                </main>
+            </>
+        );
     }
 
     return (
@@ -185,13 +258,30 @@ export default function CreateEventPage() {
                                     </div>
                                 </div>
 
-                                <Input
-                                    label="Venue Name"
-                                    placeholder="Select or enter venue name"
-                                    value={formData.venueName}
-                                    onChange={(e) => setFormData({ ...formData, venueName: e.target.value })}
-                                    helperText="You can book a venue from our listings or enter a custom location"
-                                />
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-300 mb-2">Select Venue *</label>
+                                    <div className="relative">
+                                        <select
+                                            value={formData.venueId}
+                                            onChange={(e) => setFormData({ ...formData, venueId: e.target.value })}
+                                            className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-violet-500/50 appearance-none cursor-pointer"
+                                            disabled={loadingVenues}
+                                        >
+                                            <option value="" className="bg-[#1a1a1a]">
+                                                {loadingVenues ? 'Loading venues...' : 'Select a venue'}
+                                            </option>
+                                            {venues.map((venue) => (
+                                                <option key={venue._id} value={venue._id} className="bg-[#1a1a1a]">
+                                                    {venue.name}
+                                                </option>
+                                            ))}
+                                        </select>
+                                        <svg className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                        </svg>
+                                    </div>
+                                    <p className="mt-1.5 text-xs text-gray-500">Choose from available venues for your event</p>
+                                </div>
 
                                 <div>
                                     <label className="block text-sm font-medium text-gray-300 mb-2">Maximum Attendees</label>
@@ -284,6 +374,57 @@ export default function CreateEventPage() {
                                         />
                                     </div>
                                 )}
+
+                                {/* Event Cover Image */}
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-300 mb-2">Event Cover Image (Optional)</label>
+                                    <div className="relative">
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            onChange={(e) => {
+                                                const file = e.target.files?.[0];
+                                                if (!file) return;
+                                                setCoverImageFile(file);
+                                                setCoverImagePreview(URL.createObjectURL(file));
+                                            }}
+                                            className="hidden"
+                                            id="cover-image-upload"
+                                        />
+                                        <label
+                                            htmlFor="cover-image-upload"
+                                            className="flex items-center justify-center gap-2 w-full px-4 py-4 rounded-xl bg-white/5 border border-dashed border-white/20 text-gray-400 hover:bg-white/10 hover:border-violet-500/50 cursor-pointer transition-all"
+                                        >
+                                            {coverImagePreview ? (
+                                                <span className="text-green-400 text-sm">✓ Image selected (will upload on submit)</span>
+                                            ) : (
+                                                <>
+                                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                                    </svg>
+                                                    <span className="text-sm">Click to select cover image</span>
+                                                </>
+                                            )}
+                                        </label>
+                                        {coverImagePreview && (
+                                            <img src={coverImagePreview} alt="Preview" className="mt-2 w-full h-40 object-cover rounded-xl" />
+                                        )}
+                                    </div>
+                                    <p className="mt-1.5 text-xs text-gray-500">Recommended: 1200x600px, max 10MB</p>
+                                </div>
+
+                                {/* Terms and Conditions */}
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-300 mb-2">Terms & Conditions (Optional)</label>
+                                    <textarea
+                                        placeholder="Enter any rules, guidelines, or terms for attendees..."
+                                        value={formData.termsAndConditions}
+                                        onChange={(e) => setFormData({ ...formData, termsAndConditions: e.target.value })}
+                                        rows={4}
+                                        className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-violet-500/50 resize-none"
+                                    />
+                                    <p className="mt-1.5 text-xs text-gray-500">Age restrictions, dress code, rules, etc.</p>
+                                </div>
 
                                 <div className="flex justify-between pt-4">
                                     <Button variant="secondary" onClick={() => setStep(2)}>Back</Button>

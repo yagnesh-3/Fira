@@ -338,4 +338,56 @@ export const verificationApi = {
         }),
 };
 
+// Upload API (uses FormData, not JSON)
+export const uploadApi = {
+    single: async (file: File, folder = 'events'): Promise<{ url: string; publicId: string }> => {
+        const formData = new FormData();
+        formData.append('image', file);
+        formData.append('folder', folder);
+
+        const token = typeof window !== 'undefined' ? localStorage.getItem('fira_token') : null;
+        const headers: HeadersInit = {};
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+        }
+
+        const response = await fetch(`${API_BASE_URL}/upload/single`, {
+            method: 'POST',
+            headers,
+            body: formData,
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Upload failed');
+        }
+
+        return response.json();
+    },
+    multiple: async (files: File[], folder = 'events'): Promise<{ images: { url: string; publicId: string }[] }> => {
+        const formData = new FormData();
+        files.forEach(file => formData.append('images', file));
+        formData.append('folder', folder);
+
+        const token = typeof window !== 'undefined' ? localStorage.getItem('fira_token') : null;
+        const headers: HeadersInit = {};
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+        }
+
+        const response = await fetch(`${API_BASE_URL}/upload/multiple`, {
+            method: 'POST',
+            headers,
+            body: formData,
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Upload failed');
+        }
+
+        return response.json();
+    },
+};
+
 export { ApiError };

@@ -4,26 +4,38 @@ const PrivateEventAccess = require('../models/PrivateEventAccess');
 const eventService = {
     // Get all events
     async getAllEvents(query = {}) {
-        const { page = 1, limit = 10, eventType, status, category, organizer } = query;
+        const { page = 1, limit = 10, eventType, status, category, organizer, sort, search } = query;
         const filter = {};
         if (eventType) filter.eventType = eventType;
         if (status) filter.status = status;
-        if (category) filter.category = category;
-        if (organizer) filter.organizer = organizer; // Filter by organizer if provided
+        if (category && category !== 'All') filter.category = category;
+        if (organizer) filter.organizer = organizer;
+        if (search) {
+            filter.$or = [
+                { name: new RegExp(search, 'i') },
+                { description: new RegExp(search, 'i') }
+            ];
+        }
+
+        // Sorting options
+        let sortOption = { date: 1 }; // default: upcoming (earliest first)
+        if (sort === 'upcoming') sortOption = { date: 1 };
+        else if (sort === 'top') sortOption = { 'stats.attendees': -1, 'stats.interested': -1 };
+        else if (sort === 'latest') sortOption = { createdAt: -1 };
 
         const events = await Event.find(filter)
             .populate('organizer', 'name email verificationBadge')
             .populate('venue', 'name address images')
-            .limit(limit * 1)
-            .skip((page - 1) * limit)
-            .sort({ date: 1 });
+            .limit(parseInt(limit))
+            .skip((parseInt(page) - 1) * parseInt(limit))
+            .sort(sortOption);
 
         const total = await Event.countDocuments(filter);
 
         return {
             events,
-            totalPages: Math.ceil(total / limit),
-            currentPage: page,
+            totalPages: Math.ceil(total / parseInt(limit)),
+            currentPage: parseInt(page),
             total
         };
     },

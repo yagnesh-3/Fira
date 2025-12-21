@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import Navbar from '@/components/Navbar';
 import PartyBackground from '@/components/PartyBackground';
 import BrandCard from '@/components/BrandCard';
@@ -65,8 +65,23 @@ export default function BrandsPage() {
     });
 
     const [gridData, setGridData] = useState<Brand[]>([]);
+    const [page, setPage] = useState(1);
+    const [hasMore, setHasMore] = useState(true);
+    const [isLoadingMore, setIsLoadingMore] = useState(false);
+    const observerRef = useRef<IntersectionObserver | null>(null);
+    const loadMoreRef = useRef<HTMLDivElement>(null);
 
     const isFiltered = searchQuery !== '' || selectedType !== 'All' || selectedSort !== 'recommended';
+    const defaultSort = 'recommended';
+
+    const resetFilters = () => {
+        setSearchQuery('');
+        setSelectedType('All');
+        setSelectedSort(defaultSort);
+        setPage(1);
+        setGridData([]);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
 
 
 
@@ -184,6 +199,7 @@ export default function BrandsPage() {
 
                     const res = await brandsApi.getAll(params) as BrandsResponse;
                     setGridData(res.brands);
+                    setHasMore(res.currentPage < res.totalPages);
                 } catch (error) {
                     console.error('Error fetching filtered brands:', error);
                 } finally {
@@ -196,14 +212,61 @@ export default function BrandsPage() {
         }
     }, [searchQuery, selectedType, selectedSort, isFiltered, location]);
 
+    // Infinite scroll observer
+    useEffect(() => {
+        if (!isFiltered || !hasMore || isLoadingMore) return;
+
+        observerRef.current = new IntersectionObserver(
+            (entries) => {
+                if (entries[0].isIntersecting && hasMore && !isLoadingMore) {
+                    setPage(prev => prev + 1);
+                }
+            },
+            { threshold: 0.1 }
+        );
+
+        if (loadMoreRef.current) {
+            observerRef.current.observe(loadMoreRef.current);
+        }
+
+        return () => observerRef.current?.disconnect();
+    }, [hasMore, isLoadingMore, isFiltered]);
+
+    // Load more on page change
+    useEffect(() => {
+        if (page > 1 && isFiltered) {
+            const loadMore = async () => {
+                setIsLoadingMore(true);
+                try {
+                    const params: any = {
+                        search: searchQuery,
+                        limit: '20',
+                        page: page.toString()
+                    };
+                    if (selectedType !== 'All') params.type = selectedType;
+                    if (selectedSort !== 'recommended') params.sort = selectedSort;
+
+                    const res = await brandsApi.getAll(params) as BrandsResponse;
+                    setGridData(prev => [...prev, ...res.brands]);
+                    setHasMore(res.currentPage < res.totalPages);
+                } catch (error) {
+                    console.error('Error loading more:', error);
+                } finally {
+                    setIsLoadingMore(false);
+                }
+            };
+            loadMore();
+        }
+    }, [page, isFiltered, searchQuery, selectedType, selectedSort]);
+
     const Section = ({ title, data, type, sort }: { title: string, data: any[], type?: string, sort?: string }) => {
         if (!data || data.length === 0) return null;
 
         return (
-            <div className="mb-16">
-                <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-2xl font-bold text-white relative pl-4">
-                        <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-gradient-to-b from-violet-500 to-pink-500 rounded-full"></span>
+            <div className="mb-12">
+                <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-xl md:text-2xl font-bold text-white relative pl-4">
+                        <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 md:h-6 bg-gradient-to-b from-violet-500 to-pink-500 rounded-full"></span>
                         {title}
                     </h2>
                     <Button
@@ -214,9 +277,12 @@ export default function BrandsPage() {
                         See All
                     </Button>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                {/* Horizontal scroll container */}
+                <div className="flex gap-4 overflow-x-auto pb-4 snap-x snap-mandatory scrollbar-hide -mx-4 px-4">
                     {data.map((brand) => (
-                        <BrandCard key={brand._id} brand={brand} />
+                        <div key={brand._id} className="flex-shrink-0 w-[280px] md:w-[300px] snap-start">
+                            <BrandCard brand={brand} />
+                        </div>
                     ))}
                 </div>
             </div>
@@ -283,6 +349,15 @@ export default function BrandsPage() {
                                         }
                                     />
                                 </div>
+                                {isFiltered && (
+                                    <Button
+                                        variant="ghost"
+                                        onClick={resetFilters}
+                                        className="text-violet-400 hover:text-violet-300 whitespace-nowrap"
+                                    >
+                                        Reset
+                                    </Button>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -373,27 +448,42 @@ export default function BrandsPage() {
                     )}
 
                     {!isLoading && isFiltered && (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                            {gridData.map((brand) => (
-                                <BrandCard key={brand._id} brand={brand} />
-                            ))}
+                        <>
+                            <div className="mb-4">
+                                <p className="text-gray-400 text-sm">
+                                    Showing {gridData.length} results
+                                </p>
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                                {gridData.map((brand) => (
+                                    <BrandCard key={brand._id} brand={brand} />
+                                ))}
+                            </div>
+
+                            {hasMore && (
+                                <div ref={loadMoreRef} className="flex justify-center py-8">
+                                    {isLoadingMore && (
+                                        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-violet-500"></div>
+                                    )}
+                                </div>
+                            )}
+
                             {gridData.length === 0 && (
-                                <div className="col-span-full text-center py-20 text-gray-500">
-                                    <p className="text-xl">No results found matching your criteria</p>
-                                    <Button
-                                        variant="ghost"
-                                        className="mt-4 text-violet-400 hover:text-violet-300"
-                                        onClick={() => {
-                                            setSearchQuery('');
-                                            setSelectedType('All');
-                                            setSelectedSort('recommended');
-                                        }}
-                                    >
-                                        Clear Filters
+                                <div className="text-center py-20 text-gray-500">
+                                    <p className="text-xl mb-4">No results found</p>
+                                    <Button variant="ghost" className="text-violet-400" onClick={resetFilters}>
+                                        Reset Filters
                                     </Button>
                                 </div>
                             )}
-                        </div>
+
+                            {!hasMore && gridData.length > 0 && (
+                                <div className="text-center py-8 text-gray-500">
+                                    <p>You've seen all results</p>
+                                </div>
+                            )}
+                        </>
                     )}
                 </div>
             </main>

@@ -15,7 +15,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use((req, res, next) => {
     const timestamp = new Date().toISOString();
     console.log(`📥 [${timestamp}] ${req.method} ${req.url}`);
-    if (req.method !== 'GET' && Object.keys(req.body).length > 0) {
+    if (req.method !== 'GET' && req.body && Object.keys(req.body).length > 0) {
         console.log('   Body:', JSON.stringify(req.body).substring(0, 200));
     }
     next();
@@ -35,6 +35,7 @@ const ticketRoutes = require('./routes/ticket');
 const paymentRoutes = require('./routes/payment');
 const notificationRoutes = require('./routes/notification');
 const verificationRoutes = require('./routes/verification');
+const uploadRoutes = require('./routes/upload');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
@@ -46,6 +47,7 @@ app.use('/api/tickets', ticketRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/verification', verificationRoutes);
+app.use('/api/upload', uploadRoutes);
 
 // Health Check
 app.get('/', (req, res) => {

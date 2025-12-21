@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import Navbar from '@/components/Navbar';
 import PartyBackground from '@/components/PartyBackground';
 import VenueCard from '@/components/VenueCard';
@@ -27,8 +27,33 @@ const sortOptions = [
     { value: 'nearby', label: 'Near You' },
 ];
 
+interface VenuesResponse {
+    venues: Venue[];
+    totalPages: number;
+    currentPage: number;
+    total: number;
+}
+
 export default function VenuesPage() {
-    const [venues, setVenues] = useState<Venue[]>([]);
+    // Section data (for non-filtered view)
+    const [sections, setSections] = useState<{
+        topRated: Venue[];
+        inDemand: Venue[];
+        latest: Venue[];
+        nearby: Venue[];
+    }>({
+        topRated: [],
+        inDemand: [],
+        latest: [],
+        nearby: []
+    });
+
+    // Filtered/paginated data
+    const [gridData, setGridData] = useState<Venue[]>([]);
+    const [page, setPage] = useState(1);
+    const [hasMore, setHasMore] = useState(true);
+    const [isLoadingMore, setIsLoadingMore] = useState(false);
+
     const [isLoading, setIsLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedCity, setSelectedCity] = useState('All');
@@ -36,72 +61,152 @@ export default function VenuesPage() {
     const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
     const [locationError, setLocationError] = useState(false);
 
-    useEffect(() => {
-        fetchVenues();
-    }, []);
+    const observerRef = useRef<IntersectionObserver | null>(null);
+    const loadMoreRef = useRef<HTMLDivElement>(null);
+    const [showAllMode, setShowAllMode] = useState(false);
 
-    // Request location on mount
-    useEffect(() => {
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
-                (pos) => setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-                () => setLocationError(true)
-            );
-        } else {
-            setLocationError(true);
-        }
-    }, []);
+    const isFiltered = showAllMode || searchQuery !== '' || selectedCity !== 'All' || selectedSort !== 'topRated';
+    const defaultSort = 'topRated';
 
-    const fetchVenues = async () => {
-        try {
-            setIsLoading(true);
-            const data = await venuesApi.getAll({ status: 'approved' });
-            // Handle both array response and object response with venues property
-            const venuesArray = Array.isArray(data) ? data : (data as { venues?: Venue[] }).venues || [];
-            setVenues(venuesArray as Venue[]);
-        } catch (error) {
-            console.error('Failed to fetch venues:', error);
-            setVenues([]);
-        } finally {
-            setIsLoading(false);
-        }
+    // Reset filters
+    const resetFilters = () => {
+        setSearchQuery('');
+        setSelectedCity('All');
+        setSelectedSort(defaultSort);
+        setShowAllMode(false);
+        setPage(1);
+        setGridData([]);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
-    const isFiltered = searchQuery !== '' || selectedCity !== 'All' || selectedSort !== 'topRated';
+    // Fetch sections for homepage view
+    useEffect(() => {
+        if (isFiltered) return;
 
-    // Sorting functions
-    const sortByTopRated = (a: Venue, b: Venue) => b.rating.average - a.rating.average;
-    const sortByInDemand = (a: Venue, b: Venue) => b.rating.count - a.rating.count; // More reviews = more demand
-    const sortByLatest = (a: Venue, b: Venue) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        const fetchSections = async () => {
+            setIsLoading(true);
+            try {
+                // Request location
+                if (navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition(
+                        (pos) => setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+                        () => setLocationError(true)
+                    );
+                }
 
-    const filteredVenues = venues
-        .filter((venue) => {
-            const matchesSearch = venue.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                venue.description.toLowerCase().includes(searchQuery.toLowerCase());
-            const matchesCity = selectedCity === 'All' || venue.address.city === selectedCity;
-            return matchesSearch && matchesCity;
-        })
-        .sort((a, b) => {
-            if (selectedSort === 'inDemand') return sortByInDemand(a, b);
-            if (selectedSort === 'latest') return sortByLatest(a, b);
-            return sortByTopRated(a, b);
-        });
+                const [topRatedRes, inDemandRes, latestRes] = await Promise.all([
+                    venuesApi.getAll({ status: 'approved', sort: 'topRated', limit: '4' }) as Promise<VenuesResponse>,
+                    venuesApi.getAll({ status: 'approved', sort: 'inDemand', limit: '4' }) as Promise<VenuesResponse>,
+                    venuesApi.getAll({ status: 'approved', sort: 'latest', limit: '4' }) as Promise<VenuesResponse>,
+                ]);
 
-    // Sections for non-filtered view
-    const topRatedVenues = [...venues].sort(sortByTopRated).slice(0, 4);
-    const inDemandVenues = [...venues].sort(sortByInDemand).slice(0, 4);
-    const latestVenues = [...venues].sort(sortByLatest).slice(0, 4);
-    // Nearby would require actual geo sorting - for now show all if location available
-    const nearbyVenues = location ? venues.slice(0, 4) : [];
+                setSections({
+                    topRated: topRatedRes.venues || [],
+                    inDemand: inDemandRes.venues || [],
+                    latest: latestRes.venues || [],
+                    nearby: []
+                });
+            } catch (error) {
+                console.error('Failed to fetch venues:', error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchSections();
+    }, [isFiltered]);
+
+    // Fetch nearby when location becomes available
+    useEffect(() => {
+        if (location && !isFiltered) {
+            venuesApi.getNearby(location.lat, location.lng, 50000)
+                .then((data) => {
+                    const venues = Array.isArray(data) ? data : [];
+                    setSections(prev => ({ ...prev, nearby: venues.slice(0, 4) }));
+                })
+                .catch(console.error);
+        }
+    }, [location, isFiltered]);
+
+    // Fetch filtered/paginated data
+    const fetchFiltered = useCallback(async (pageNum: number, append: boolean = false) => {
+        if (pageNum === 1) setIsLoading(true);
+        else setIsLoadingMore(true);
+
+        try {
+            const params: Record<string, string> = {
+                status: 'approved',
+                page: pageNum.toString(),
+                limit: '12',
+                sort: selectedSort,
+            };
+            if (searchQuery) params.search = searchQuery;
+            if (selectedCity !== 'All') params.city = selectedCity;
+
+            const res = await venuesApi.getAll(params) as VenuesResponse;
+            const newVenues = res.venues || [];
+
+            if (append) {
+                setGridData(prev => [...prev, ...newVenues]);
+            } else {
+                setGridData(newVenues);
+            }
+
+            setHasMore(res.currentPage < res.totalPages);
+        } catch (error) {
+            console.error('Failed to fetch venues:', error);
+        } finally {
+            setIsLoading(false);
+            setIsLoadingMore(false);
+        }
+    }, [searchQuery, selectedCity, selectedSort]);
+
+    // Fetch when filters change
+    useEffect(() => {
+        if (isFiltered) {
+            setPage(1);
+            const timeout = setTimeout(() => fetchFiltered(1, false), 300);
+            return () => clearTimeout(timeout);
+        }
+    }, [searchQuery, selectedCity, selectedSort, isFiltered, fetchFiltered]);
+
+    // Infinite scroll observer
+    useEffect(() => {
+        if (!isFiltered || !hasMore || isLoadingMore) return;
+
+        observerRef.current = new IntersectionObserver(
+            (entries) => {
+                if (entries[0].isIntersecting && hasMore && !isLoadingMore) {
+                    setPage(prev => prev + 1);
+                }
+            },
+            { threshold: 0.1 }
+        );
+
+        if (loadMoreRef.current) {
+            observerRef.current.observe(loadMoreRef.current);
+        }
+
+        return () => observerRef.current?.disconnect();
+    }, [hasMore, isLoadingMore, isFiltered]);
+
+    // Load more when page changes
+    useEffect(() => {
+        if (page > 1 && isFiltered) {
+            fetchFiltered(page, true);
+        }
+    }, [page, isFiltered, fetchFiltered]);
 
     const handleSeeAll = (sort: string) => {
         setSelectedSort(sort);
+        setSearchQuery('');
+        setSelectedCity('All');
+        setShowAllMode(true);
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
     const handleEnableLocation = () => {
         if (!navigator.geolocation) return;
-
         navigator.geolocation.getCurrentPosition(
             (pos) => {
                 setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
@@ -109,7 +214,7 @@ export default function VenuesPage() {
             },
             () => {
                 setLocationError(true);
-                alert('Please enable location services in your browser settings to see nearby venues.');
+                alert('Please enable location services in your browser settings.');
             }
         );
     };
@@ -118,10 +223,10 @@ export default function VenuesPage() {
         if (!data || data.length === 0) return null;
 
         return (
-            <div className="mb-16">
-                <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-2xl font-bold text-white relative pl-4">
-                        <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-gradient-to-b from-violet-500 to-pink-500 rounded-full"></span>
+            <div className="mb-12">
+                <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-xl md:text-2xl font-bold text-white relative pl-4">
+                        <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 md:h-6 bg-gradient-to-b from-violet-500 to-pink-500 rounded-full"></span>
                         {title}
                     </h2>
                     {sort && (
@@ -134,9 +239,12 @@ export default function VenuesPage() {
                         </Button>
                     )}
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                {/* Horizontal scroll container */}
+                <div className="flex gap-4 overflow-x-auto pb-4 snap-x snap-mandatory scrollbar-hide -mx-4 px-4">
                     {data.map((venue) => (
-                        <VenueCard key={venue._id} venue={venue} />
+                        <div key={venue._id} className="flex-shrink-0 w-[280px] md:w-[300px] snap-start">
+                            <VenueCard venue={venue} />
+                        </div>
                     ))}
                 </div>
             </div>
@@ -161,7 +269,7 @@ export default function VenuesPage() {
                     </div>
 
                     {/* Search & Filter Bar */}
-                    <div className="relative z-30 bg-black/70 backdrop-blur-sm border border-white/10 rounded-2xl p-4 mb-12 shadow-2xl transition-all">
+                    <div className="relative z-30 bg-black/70 backdrop-blur-sm border border-white/10 rounded-2xl p-4 mb-12 shadow-2xl">
                         <div className="flex flex-col md:flex-row gap-4 items-center">
                             <div className="flex-1 w-full">
                                 <Input
@@ -177,7 +285,7 @@ export default function VenuesPage() {
                                 />
                             </div>
                             <div className="flex gap-4 w-full md:w-auto">
-                                <div className="w-full md:w-48">
+                                <div className="w-full md:w-40">
                                     <Select
                                         value={selectedCity}
                                         onChange={setSelectedCity}
@@ -190,7 +298,7 @@ export default function VenuesPage() {
                                         }
                                     />
                                 </div>
-                                <div className="w-full md:w-48">
+                                <div className="w-full md:w-40">
                                     <Select
                                         value={selectedSort}
                                         onChange={setSelectedSort}
@@ -203,10 +311,20 @@ export default function VenuesPage() {
                                         }
                                     />
                                 </div>
+                                {isFiltered && (
+                                    <Button
+                                        variant="ghost"
+                                        onClick={resetFilters}
+                                        className="text-violet-400 hover:text-violet-300 whitespace-nowrap"
+                                    >
+                                        Reset
+                                    </Button>
+                                )}
                             </div>
                         </div>
                     </div>
 
+                    {/* Loading State */}
                     {isLoading && (
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                             {Array.from({ length: 8 }).map((_, i) => (
@@ -215,21 +333,21 @@ export default function VenuesPage() {
                         </div>
                     )}
 
+                    {/* Section View (not filtered) */}
                     {!isLoading && !isFiltered && (
                         <>
-                            <Section title="Top Rated" data={topRatedVenues} sort="topRated" />
-                            <Section title="In Demand" data={inDemandVenues} sort="inDemand" />
-                            <Section title="Recently Added" data={latestVenues} sort="latest" />
+                            <Section title="Top Rated" data={sections.topRated} sort="topRated" />
+                            <Section title="In Demand" data={sections.inDemand} sort="inDemand" />
+                            <Section title="Recently Added" data={sections.latest} sort="latest" />
 
                             {/* CTA Section */}
-                            <div className="my-20 relative overflow-hidden rounded-3xl border border-white/10 bg-black/70 backdrop-blur-sm p-8 md:p-12 text-center group">
-                                <div className="absolute inset-0 bg-[url('/noise.png')] opacity-20 mix-blend-overlay"></div>
+                            <div className="my-20 relative overflow-hidden rounded-3xl border border-white/10 bg-black/70 backdrop-blur-sm p-8 md:p-12 text-center">
                                 <div className="relative z-10">
                                     <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
                                         Looking to list a venue?
                                     </h2>
                                     <p className="text-gray-400 mb-8 max-w-xl mx-auto text-lg">
-                                        Partner with us and reach thousands of event organizers. List your venue and start receiving booking requests.
+                                        Partner with us and reach thousands of event organizers.
                                     </p>
                                     <Button size="lg" className="bg-white text-black hover:bg-gray-200 font-bold px-8">
                                         List Your Venue
@@ -256,9 +374,9 @@ export default function VenuesPage() {
                                 </div>
 
                                 {location ? (
-                                    nearbyVenues.length > 0 ? (
+                                    sections.nearby.length > 0 ? (
                                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                                            {nearbyVenues.map((venue) => (
+                                            {sections.nearby.map((venue) => (
                                                 <VenueCard key={venue._id} venue={venue} />
                                             ))}
                                         </div>
@@ -279,10 +397,7 @@ export default function VenuesPage() {
                                         <p className="text-gray-400 max-w-md mb-6">
                                             Enable location access to discover venues near you.
                                         </p>
-                                        <Button
-                                            onClick={handleEnableLocation}
-                                            variant="violet"
-                                        >
+                                        <Button onClick={handleEnableLocation} variant="violet">
                                             Enable Location
                                         </Button>
                                     </div>
@@ -291,28 +406,48 @@ export default function VenuesPage() {
                         </>
                     )}
 
+                    {/* Filtered Grid View with Infinite Scroll */}
                     {!isLoading && isFiltered && (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                            {filteredVenues.map((venue) => (
-                                <VenueCard key={venue._id} venue={venue} />
-                            ))}
-                            {filteredVenues.length === 0 && (
-                                <div className="col-span-full text-center py-20 text-gray-500">
-                                    <p className="text-xl">No venues found matching your criteria</p>
-                                    <Button
-                                        variant="ghost"
-                                        className="mt-4 text-violet-400 hover:text-violet-300"
-                                        onClick={() => {
-                                            setSearchQuery('');
-                                            setSelectedCity('All');
-                                            setSelectedSort('topRated');
-                                        }}
-                                    >
-                                        Clear Filters
+                        <>
+                            <div className="mb-4 flex items-center justify-between">
+                                <p className="text-gray-400 text-sm">
+                                    Showing {gridData.length} venues
+                                    {selectedSort !== defaultSort && ` • Sorted by ${sortOptions.find(o => o.value === selectedSort)?.label}`}
+                                </p>
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                                {gridData.map((venue) => (
+                                    <VenueCard key={venue._id} venue={venue} />
+                                ))}
+                            </div>
+
+                            {/* Load more trigger */}
+                            {hasMore && (
+                                <div ref={loadMoreRef} className="flex justify-center py-8">
+                                    {isLoadingMore && (
+                                        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-violet-500"></div>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* No results */}
+                            {gridData.length === 0 && (
+                                <div className="text-center py-20 text-gray-500">
+                                    <p className="text-xl mb-4">No venues found matching your criteria</p>
+                                    <Button variant="ghost" className="text-violet-400 hover:text-violet-300" onClick={resetFilters}>
+                                        Reset Filters
                                     </Button>
                                 </div>
                             )}
-                        </div>
+
+                            {/* End of results */}
+                            {!hasMore && gridData.length > 0 && (
+                                <div className="text-center py-8 text-gray-500">
+                                    <p>You've seen all venues</p>
+                                </div>
+                            )}
+                        </>
                     )}
                 </div>
             </main>

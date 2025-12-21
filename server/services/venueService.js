@@ -3,23 +3,35 @@ const Venue = require('../models/Venue');
 const venueService = {
     // Get all venues
     async getAllVenues(query = {}) {
-        const { page = 1, limit = 10, status, city } = query;
+        const { page = 1, limit = 10, status, city, sort, search } = query;
         const filter = {};
         if (status) filter.status = status;
-        if (city) filter['address.city'] = new RegExp(city, 'i');
+        if (city && city !== 'All') filter['address.city'] = new RegExp(city, 'i');
+        if (search) {
+            filter.$or = [
+                { name: new RegExp(search, 'i') },
+                { description: new RegExp(search, 'i') }
+            ];
+        }
+
+        // Sorting options
+        let sortOption = { createdAt: -1 }; // default: latest
+        if (sort === 'topRated') sortOption = { 'rating.average': -1 };
+        else if (sort === 'inDemand') sortOption = { 'rating.count': -1 };
+        else if (sort === 'latest') sortOption = { createdAt: -1 };
 
         const venues = await Venue.find(filter)
             .populate('owner', 'name email')
-            .limit(limit * 1)
-            .skip((page - 1) * limit)
-            .sort({ createdAt: -1 });
+            .limit(parseInt(limit))
+            .skip((parseInt(page) - 1) * parseInt(limit))
+            .sort(sortOption);
 
         const total = await Venue.countDocuments(filter);
 
         return {
             venues,
-            totalPages: Math.ceil(total / limit),
-            currentPage: page,
+            totalPages: Math.ceil(total / parseInt(limit)),
+            currentPage: parseInt(page),
             total
         };
     },

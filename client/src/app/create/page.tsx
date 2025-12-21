@@ -102,7 +102,7 @@ export default function CreatePage() {
                             return (
                                 <button
                                     key={option.title}
-                                    onClick={handleCreate}
+                                    onClick={() => router.push(option.path)}
                                     className={`group text-left h-full bg-black/70 backdrop-blur-sm border border-white/5 rounded-2xl p-6 transition-all duration-300 ${colors.hover} hover:-translate-y-1`}
                                 >
                                     {/* Icon */}

@@ -31,9 +31,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
     const [token, setToken] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [isMounted, setIsMounted] = useState(false);
 
-    // Load user from localStorage on mount
+    // Load user from localStorage on mount (client-side only)
     useEffect(() => {
+        setIsMounted(true);
+
         const storedToken = localStorage.getItem('fira_token');
         const storedUser = localStorage.getItem('fira_user');
 
@@ -84,7 +87,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             value={{
                 user,
                 token,
-                isLoading,
+                isLoading: !isMounted || isLoading, // Still loading if not mounted OR localStorage not checked
                 isAuthenticated: !!user && !!token,
                 login,
                 register,

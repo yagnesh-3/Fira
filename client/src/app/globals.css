@@ -320,3 +320,13 @@ body {
 .delay-500 {
   animation-delay: 0.5s;
 }
+
+/* Hide scrollbars for horizontal scroll containers */
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;  /* Chrome, Safari, Opera */
+}
