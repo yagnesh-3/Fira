@@ -427,9 +427,10 @@ export default function VenuesPage() {
                 {!loading && !error && (
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                         {venues.map((venue) => (
-                            <div
+                            <Link
                                 key={venue._id}
-                                className="group bg-white/[0.02] backdrop-blur-sm border border-white/[0.08] rounded-2xl overflow-hidden hover:bg-white/[0.04] hover:border-white/[0.12] transition-all duration-300"
+                                href={`/dashboard/venues/${venue._id}`}
+                                className="group bg-white/[0.02] backdrop-blur-sm border border-white/[0.08] rounded-2xl overflow-hidden hover:bg-white/[0.04] hover:border-white/[0.12] transition-all duration-300 cursor-pointer"
                             >
                                 <div className="flex flex-col md:flex-row">
                                     {/* Venue Image */}
@@ -513,19 +514,9 @@ export default function VenuesPage() {
                                                 <span className="text-sm text-yellow-400">{venue.pendingBookings} pending request{(venue.pendingBookings || 0) > 1 ? 's' : ''}</span>
                                             </div>
                                         )}
-
-                                        {/* Actions */}
-                                        <div className="flex flex-wrap gap-2 pt-4 border-t border-white/[0.05]">
-                                            <Button variant="secondary" size="sm" onClick={() => openEditModal(venue)}>
-                                                Edit
-                                            </Button>
-                                            <Button variant="ghost" size="sm" onClick={() => openAvailabilityModal(venue)}>
-                                                Availability
-                                            </Button>
-                                        </div>
                                     </div>
                                 </div>
-                            </div>
+                            </Link>
                         ))}
                     </div>
                 )}
