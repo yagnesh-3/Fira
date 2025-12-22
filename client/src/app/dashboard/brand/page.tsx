@@ -212,9 +212,16 @@ export default function BrandDashboardPage() {
                         <Link href={`/brands/${brand._id}`}>
                             <Button variant="secondary">View Public Profile</Button>
                         </Link>
-                        <Button onClick={() => setIsEditing(!isEditing)}>
-                            {isEditing ? 'Cancel' : 'Edit Profile'}
-                        </Button>
+                        {isEditing ? (
+                            <>
+                                <Button variant="ghost" onClick={() => setIsEditing(false)}>Cancel</Button>
+                                <Button onClick={handleSaveProfile} disabled={isSaving}>
+                                    {isSaving ? 'Saving...' : 'Save Changes'}
+                                </Button>
+                            </>
+                        ) : (
+                            <Button onClick={() => setIsEditing(true)}>Edit Profile</Button>
+                        )}
                     </div>
                 </div>
 
@@ -263,8 +270,8 @@ export default function BrandDashboardPage() {
                                                         key={tab}
                                                         onClick={() => setEditTab(tab as 'basic' | 'social' | 'photos')}
                                                         className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors capitalize ${editTab === tab
-                                                                ? 'bg-cyan-500/20 text-cyan-400'
-                                                                : 'text-gray-400 hover:text-white'
+                                                            ? 'bg-cyan-500/20 text-cyan-400'
+                                                            : 'text-gray-400 hover:text-white'
                                                             }`}
                                                     >
                                                         {tab === 'basic' ? 'Basic Info' : tab === 'social' ? 'Social Links' : 'Photos'}
@@ -410,10 +417,6 @@ export default function BrandDashboardPage() {
                                                     </div>
                                                 </div>
                                             )}
-
-                                            <Button onClick={handleSaveProfile} disabled={isSaving}>
-                                                {isSaving ? 'Saving...' : 'Save Changes'}
-                                            </Button>
                                         </div>
                                     ) : (
                                         <>
