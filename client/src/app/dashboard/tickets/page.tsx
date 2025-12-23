@@ -8,6 +8,7 @@ import DashboardLayout from '@/components/dashboard/DashboardLayout';
 import { Button } from '@/components/ui';
 import { ticketsApi } from '@/lib/api';
 import TicketDisplay from '@/components/TicketDisplay';
+import { CancellationModal } from '@/components/CancellationModal';
 
 interface Ticket {
     _id: string;
@@ -44,6 +45,7 @@ export default function TicketsPage() {
     }, [isLoading, isAuthenticated, router]);
 
     const [selectedTicket, setSelectedTicket] = useState<any>(null);
+    const [cancelTicket, setCancelTicket] = useState<Ticket | null>(null);
 
     useEffect(() => {
         const fetchTickets = async () => {
@@ -179,6 +181,19 @@ export default function TicketsPage() {
                                                     </Button>
                                                 </Link>
                                             )}
+                                            {ticket.status === 'active' && (
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                                                    onClick={() => setCancelTicket(ticket)}
+                                                >
+                                                    <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6 18L18 6M6 6l12 12" />
+                                                    </svg>
+                                                    Cancel Ticket
+                                                </Button>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
@@ -211,6 +226,26 @@ export default function TicketsPage() {
                             />
                         </div>
                     </div>
+                )}
+
+                {/* Cancellation Modal */}
+                {cancelTicket && user && (
+                    <CancellationModal
+                        isOpen={!!cancelTicket}
+                        onClose={() => setCancelTicket(null)}
+                        ticketId={cancelTicket._id}
+                        eventName={cancelTicket.event?.name || 'Event'}
+                        userId={user._id}
+                        onSuccess={() => {
+                            // Refresh tickets list
+                            setTickets(prev => prev.map(t =>
+                                t._id === cancelTicket._id
+                                    ? { ...t, status: 'cancelled' }
+                                    : t
+                            ));
+                            setCancelTicket(null);
+                        }}
+                    />
                 )}
             </div>
         </DashboardLayout>

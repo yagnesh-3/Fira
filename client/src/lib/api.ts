@@ -197,9 +197,17 @@ export const eventsApi = {
         request(`/events/${id}`, {
             method: 'DELETE',
         }),
-    cancel: (id: string) =>
-        request(`/events/${id}/cancel`, {
+    cancel: (id: string, reason?: string) =>
+        request<{
+            event: any;
+            refundResults: {
+                totalRefunds: number;
+                successCount: number;
+                failedCount: number;
+            } | null;
+        }>(`/events/${id}/cancel`, {
             method: 'POST',
+            body: JSON.stringify({ reason }),
         }),
     requestAccess: (id: string, data: { code: string; userId: string }) =>
         request(`/events/${id}/access`, {
@@ -237,10 +245,13 @@ export const bookingsApi = {
             method: 'PUT',
             body: JSON.stringify({ status, reason }),
         }),
-    cancel: (id: string, reason?: string) =>
-        request(`/bookings/${id}/cancel`, {
+    cancel: (id: string, userId: string, reason?: string) =>
+        request<{
+            booking: any;
+            refund: any | null;
+        }>(`/bookings/${id}/cancel`, {
             method: 'POST',
-            body: JSON.stringify({ reason }),
+            body: JSON.stringify({ userId, reason }),
         }),
     initiatePayment: (id: string, userId: string) =>
         request<{
@@ -285,10 +296,30 @@ export const ticketsApi = {
             method: 'POST',
             body: JSON.stringify({ qrCode }),
         }),
-    cancel: (ticketId: string) =>
-        request(`/tickets/${ticketId}/cancel`, {
+    cancel: (ticketId: string, userId: string, reason?: string) =>
+        request<{
+            ticket: any;
+            refund: any | null;
+            refundEligibility: {
+                amount: number;
+                refundType: string;
+                policy: string;
+                refundPercentage: number;
+            };
+        }>(`/tickets/${ticketId}/cancel`, {
             method: 'POST',
+            body: JSON.stringify({ userId, reason }),
         }),
+    checkRefundEligibility: (ticketId: string) =>
+        request<{
+            eligible: boolean;
+            reason: string;
+            refundAmount: number;
+            originalAmount: number;
+            refundPercentage: number;
+            policy: string;
+            eventDate: string;
+        }>(`/tickets/${ticketId}/refund-eligibility`),
 };
 
 // Payments API
@@ -318,6 +349,20 @@ export const paymentsApi = {
         const query = params ? '?' + new URLSearchParams(params).toString() : '';
         return request(`/payments/payouts/all${query}`);
     },
+    // Refund-related methods
+    getAllRefunds: (params?: Record<string, string>) => {
+        const query = params ? '?' + new URLSearchParams(params).toString() : '';
+        return request<{
+            refunds: any[];
+            totalPages: number;
+            currentPage: number;
+            total: number;
+        }>(`/payments/refunds${query}`);
+    },
+    getUserRefunds: (userId: string) =>
+        request<any[]>(`/payments/refunds/user/${userId}`),
+    getRefundById: (id: string) =>
+        request<any>(`/payments/refunds/${id}`),
 };
 
 // Notifications API
