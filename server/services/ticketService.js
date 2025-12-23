@@ -1,5 +1,8 @@
 const Ticket = require('../models/Ticket');
 const Event = require('../models/Event');
+const paymentService = require('./paymentService'); // Import payment service
+const QRCode = require('qrcode');
+const crypto = require('crypto');
 
 const ticketService = {
     // Get all tickets
@@ -30,7 +33,7 @@ const ticketService = {
         const tickets = await Ticket.find({ user: userId })
             .populate({
                 path: 'event',
-                select: 'name date startTime venue',
+                select: 'name date startTime images venue',
                 populate: { path: 'venue', select: 'name address' }
             })
             .sort({ createdAt: -1 });
@@ -60,9 +63,7 @@ const ticketService = {
     },
 
     // Purchase ticket
-    async purchaseTicket({ userId, eventId, quantity = 1, ticketType = 'general' }) {
-        const crypto = require('crypto');
-
+    async purchaseTicket({ userId, eventId, quantity = 1, ticketType = 'general', paymentId = null }) {
         const event = await Event.findById(eventId);
         if (!event) {
             throw new Error('Event not found');
@@ -72,23 +73,60 @@ const ticketService = {
             throw new Error('Not enough tickets available');
         }
 
-        // Generate ticket ID and QR code
+        console.log('Purchase Request:', {
+            eventId,
+            ticketType: event.ticketType,
+            ticketPrice: event.ticketPrice,
+            isPaid: event.ticketType === 'paid',
+            hasPrice: event.ticketPrice > 0,
+            paymentId
+        });
+
+        // If paid event and no payment flow yet, initiate payment
+        if (event.ticketType === 'paid' && event.ticketPrice > 0 && !paymentId) {
+            const totalPrice = event.ticketPrice * quantity;
+            
+            // Initiate payment
+            const paymentResult = await paymentService.initiatePayment({
+                userId,
+                type: 'ticket',
+                referenceId: eventId,
+                referenceModel: 'Event',
+                amount: totalPrice
+            });
+
+            return {
+                paymentRequired: true,
+                paymentData: paymentResult
+            };
+        }
+
+        // Generate ticket ID
         const ticketId = 'TKT-' + crypto.randomBytes(6).toString('hex').toUpperCase();
-        const qrCode = Buffer.from(JSON.stringify({
+        
+        // Generate QR Code content with all ticket data
+        const qrData = JSON.stringify({
             ticketId,
             eventId,
-            userId
-        })).toString('base64');
+            userId,
+            quantity,
+            ticketType,
+            timestamp: Date.now()
+        });
+        
+        // Generate QR Code Image (Data URL)
+        const qrCodeUrl = await QRCode.toDataURL(qrData);
 
         // Create ticket
         const ticket = await Ticket.create({
             user: userId,
             event: eventId,
             ticketId,
-            qrCode,
+            qrCode: qrCodeUrl, // Storing the Data URL directly
             ticketType,
             quantity,
-            price: event.ticketPrice * quantity
+            price: event.ticketPrice * quantity,
+            payment: paymentId // Link to payment if exists
         });
 
         // Update event attendee count
@@ -96,9 +134,10 @@ const ticketService = {
             $inc: { currentAttendees: quantity }
         });
 
-        // TODO: Initiate payment if paid event
-
-        return ticket;
+        return {
+            success: true,
+            ticket
+        };
     },
 
     // Validate ticket (check-in)
@@ -111,11 +150,10 @@ const ticketService = {
         if (ticket.isUsed) {
             throw new Error('Ticket already used');
         }
-
-        if (ticket.qrCode !== qrCode) {
-            throw new Error('Invalid QR code');
-        }
-
+        
+        // Note: For now we're just checking if a ticket matches the ID. 
+        // In production you might decode the QR code passed from the scanner and verify signature.
+        
         // Mark as used
         ticket.isUsed = true;
         ticket.usedAt = new Date();

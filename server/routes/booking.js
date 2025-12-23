@@ -82,4 +82,33 @@ router.post('/:id/cancel', async (req, res) => {
     }
 });
 
+// POST /api/bookings/:id/initiate-payment - Initiate Razorpay payment
+router.post('/:id/initiate-payment', async (req, res) => {
+    try {
+        const { userId } = req.body;
+        if (!userId) {
+            return res.status(400).json({ error: 'userId is required' });
+        }
+        const result = await bookingService.initiateBookingPayment(req.params.id, userId);
+        res.json(result);
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+});
+
+// POST /api/bookings/:id/verify-payment - Verify payment after Razorpay callback
+router.post('/:id/verify-payment', async (req, res) => {
+    try {
+        const { gatewayOrderId, gatewayPaymentId, gatewaySignature } = req.body;
+        const result = await bookingService.completeBookingPayment(req.params.id, {
+            gatewayOrderId,
+            gatewayPaymentId,
+            gatewaySignature
+        });
+        res.json(result);
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+});
+
 module.exports = router;

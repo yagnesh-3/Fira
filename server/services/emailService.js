@@ -130,6 +130,43 @@ class EmailService {
       return false;
     }
   }
+  /**
+   * Send ticket confirmation email
+   * @param {string} email - Recipient email
+   * @param {string} name - User's name
+   * @param {object} event - Event details
+   * @param {object} ticket - Ticket details
+   * @returns {Promise<boolean>} - Success status
+   */
+  async sendTicketEmail(email, name, event, ticket) {
+    try {
+      if (!this.transporter) {
+        console.warn('⚠️ Email service not initialized, skipping ticket email.');
+        return false;
+      }
+
+      const mailOptions = {
+        from: `"${process.env.SMTP_FROM_NAME || 'Fira Tickets'}" <${process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER}>`,
+        to: email,
+        subject: `Your Ticket for ${event.name} 🎟️`,
+        html: emailTemplates.ticketConfirmation(name, event, ticket),
+        // attachments: [
+        //   {
+        //     filename: 'ticket-qr.png',
+        //     content: ticket.qrCode.split('base64,')[1],
+        //     encoding: 'base64'
+        //   }
+        // ]
+      };
+
+      const info = await this.transporter.sendMail(mailOptions);
+      console.log('✅ Ticket email sent successfully:', info.messageId);
+      return true;
+    } catch (error) {
+      console.error('❌ Failed to send ticket email:', error.message);
+      return false;
+    }
+  }
 }
 
 // Create singleton instance

@@ -8,7 +8,7 @@ const paymentSchema = new mongoose.Schema({
     },
     type: {
         type: String,
-        enum: ['venue_booking', 'ticket_purchase'],
+        enum: ['venue_booking', 'ticket_purchase', 'ticket'],
         required: true
     },
     referenceId: {
@@ -18,7 +18,7 @@ const paymentSchema = new mongoose.Schema({
     },
     referenceModel: {
         type: String,
-        enum: ['Booking', 'Ticket'],
+        enum: ['Booking', 'Ticket', 'Event'],
         required: true
     },
     amount: {
@@ -80,12 +80,11 @@ const paymentSchema = new mongoose.Schema({
 });
 
 // Calculate net amount before saving
-paymentSchema.pre('save', function (next) {
+paymentSchema.pre('save', function () {
     if (this.amount && this.platformFeePercentage) {
         this.platformFee = Math.round(this.amount * (this.platformFeePercentage / 100));
         this.netAmount = this.amount - this.platformFee;
     }
-    next();
 });
 
 // Indexes

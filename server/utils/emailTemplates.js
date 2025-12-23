@@ -305,6 +305,167 @@ const emailTemplates = {
 </body>
 </html>
     `.trim();
+  },
+
+  /**
+   * Ticket Confirmation Email Template
+   * @param {string} userName - User's name
+   * @param {object} event - Event details (name, date, time, venue)
+   * @param {object} ticket - Ticket details (ticketId, qrCode, quantity, price)
+   * @returns {string} - HTML email template
+   */
+  ticketConfirmation(userName, event, ticket) {
+    const isPaid = ticket.price > 0;
+    const formattedDate = new Date(event.date).toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+    });
+
+    return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Your Ticket for ${event.name} - FIRA</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #000000; color: #ffffff;">
+  <div style="max-width: 600px; margin: 0 auto; background: #0a0a0a; border-radius: 16px; overflow: hidden;">
+    <!-- Header -->
+    <div style="background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%); padding: 30px; text-align: center;">
+      <h1 style="margin: 0; font-size: 28px; letter-spacing: 2px;">FIRA</h1>
+      <p style="margin: 5px 0 0; opacity: 0.9; font-size: 14px;">Let's Celebrate</p>
+    </div>
+
+    <!-- Content -->
+    <div style="padding: 30px;">
+      <h2 style="margin: 0 0 20px; font-size: 24px; text-align: center;">You're Going! 🎉</h2>
+      <p style="color: #a0a0a0; text-align: center; margin-bottom: 30px;">
+        Hey ${userName}, your booking is confirmed. Get ready for an amazing experience!
+      </p>
+
+      <!-- Event Card -->
+      <div style="background: #1a1a1a; border-radius: 12px; border: 1px solid #333; overflow: hidden; margin-bottom: 30px;">
+        ${event.images && event.images[0] ? `<img src="${event.images[0]}" alt="${event.name}" style="width: 100%; height: 200px; object-fit: cover; display: block;">` : ''}
+        <div style="padding: 20px;">
+          <h3 style="margin: 0 0 10px; font-size: 20px; color: #fff;">${event.name}</h3>
+          
+          <table style="width: 100%; border-collapse: collapse;">
+            <tr>
+              <td style="padding: 5px 0; color: #888; font-size: 14px;">Date</td>
+              <td style="padding: 5px 0; color: #fff; text-align: right; font-size: 14px;">${formattedDate}</td>
+            </tr>
+            <tr>
+              <td style="padding: 5px 0; color: #888; font-size: 14px;">Time</td>
+              <td style="padding: 5px 0; color: #fff; text-align: right; font-size: 14px;">${event.startTime}</td>
+            </tr>
+            <tr>
+              <td style="padding: 5px 0; color: #888; font-size: 14px;">Venue</td>
+              <td style="padding: 5px 0; color: #fff; text-align: right; font-size: 14px;">${event.venue.name}</td>
+            </tr>
+          </table>
+        </div>
+      </div>
+
+      <!-- Ticket Details -->
+      <div style="background: #ffffff; border-radius: 12px; color: #000; padding: 20px; text-align: center; margin-bottom: 30px;">
+        <div style="font-size: 12px; color: #666; text-transform: uppercase; letter-spacing: 1px;">Ticket ID</div>
+        <div style="font-family: monospace; font-size: 18px; font-weight: bold; margin: 5px 0 15px;">${ticket.ticketId}</div>
+        
+        <!-- QR Code Placeholder (Standard QRCode generated via backend is usually attached as CID or simple img tag if public) -->
+        <!-- Ideally we attach the QR code as an image with CID. For now, assuming provided qrCode is a data url or we use text fallback if complex -->
+        <img src="${ticket.qrCode}" alt="Ticket QR Code" style="width: 180px; height: 180px; display: block; margin: 0 auto;">
+        
+        <div style="margin-top: 15px; font-size: 14px; color: #666;">
+          Scan this code at the entrance
+        </div>
+        
+        <div style="margin-top: 20px; padding-top: 20px; border-top: 1px dashed #ccc; display: flex; justify-content: space-between;">
+           <div style="text-align: left;">
+              <div style="font-size: 12px; color: #666;">Type</div>
+              <div style="font-weight: bold; text-transform: capitalize;">${ticket.ticketType}</div>
+           </div>
+           <div style="text-align: right;">
+              <div style="font-size: 12px; color: #666;">Admit</div>
+              <div style="font-weight: bold;">${ticket.quantity} Person(s)</div>
+           </div>
+        </div>
+      </div>
+
+      <p style="text-align: center; color: #666; font-size: 13px;">
+        Please save this email or download your ticket from the dashboard.
+      </p>
+
+      <div style="text-align: center; margin-top: 30px;">
+        <a href="${process.env.CLIENT_URL || 'http://localhost:3000'}/dashboard" 
+           style="display: inline-block; background: #8b5cf6; color: #ffffff; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 14px;">
+           View in Dashboard
+        </a>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div style="background: #000; padding: 20px; text-align: center; border-top: 1px solid #222;">
+      <p style="color: #444; font-size: 12px; margin: 0;">© ${new Date().getFullYear()} FIRA. All rights reserved.</p>
+    </div>
+  </div>
+</body>
+</html>
+    `.trim();
+  },
+
+  /**
+   * Ticket Confirmation Email Template
+   */
+  ticketConfirmation(userName, event, ticket) {
+    const isPaid = ticket.price > 0;
+    const formattedDate = new Date(event.date).toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+    });
+
+    return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Your Ticket for ${event.name} - FIRA</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #000000; color: #ffffff;">
+  <div style="max-width: 600px; margin: 0 auto; background: #0a0a0a; border-radius: 16px; overflow: hidden;">
+    <div style="background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%); padding: 30px; text-align: center;">
+      <h1 style="margin: 0; font-size: 28px; letter-spacing: 2px;">FIRA</h1>
+      <p style="margin: 5px 0 0; opacity: 0.9; font-size: 14px;">Let's Celebrate</p>
+    </div>
+    <div style="padding: 30px;">
+      <h2 style="margin: 0 0 20px; font-size: 24px; text-align: center;">You're Going! 🎉</h2>
+      <p style="color: #a0a0a0; text-align: center; margin-bottom: 30px;">
+        Hey ${userName}, your booking is confirmed.
+      </p>
+      <div style="background: #1a1a1a; border-radius: 12px; border: 1px solid #333; overflow: hidden; margin-bottom: 30px;">
+        ${event.images?.[0] ? `<img src="${event.images[0]}" alt="${event.name}" style="width: 100%; height: 200px; object-fit: cover; display: block;">` : ''}
+        <div style="padding: 20px;">
+          <h3 style="margin: 0 0 10px; font-size: 20px; color: #fff;">${event.name}</h3>
+          <p style="color: #ccc; margin: 5px 0;">${formattedDate} • ${event.startTime}</p>
+          <p style="color: #888; font-size: 14px;">${event.venue.name}</p>
+        </div>
+      </div>
+      <div style="background: #ffffff; border-radius: 12px; color: #000; padding: 20px; text-align: center; margin-bottom: 30px;">
+        <div style="font-size: 12px; color: #666; text-transform: uppercase;">Ticket ID</div>
+        <div style="font-family: monospace; font-size: 18px; font-weight: bold; margin: 5px 0 15px;">${ticket.ticketId}</div>
+        <img src="${ticket.qrCode}" alt="QR Code" style="width: 180px; height: 180px; display: block; margin: 0 auto;">
+        <div style="margin-top: 15px; font-size: 14px; color: #666;">Admit ${ticket.quantity} • ${ticket.ticketType}</div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+    `.trim();
   }
 };
 

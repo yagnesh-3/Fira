@@ -1,6 +1,8 @@
 const Payment = require('../models/Payment');
 const Payout = require('../models/Payout');
 const Refund = require('../models/Refund');
+const Razorpay = require('razorpay');
+const crypto = require('crypto');
 
 const paymentService = {
     // Get all payments
@@ -44,43 +46,72 @@ const paymentService = {
 
     // Initiate payment
     async initiatePayment({ userId, type, referenceId, referenceModel, amount }) {
+        if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
+            throw new Error('Razorpay credentials not configured');
+        }
+
+        const razorpay = new Razorpay({
+            key_id: process.env.RAZORPAY_KEY_ID,
+            key_secret: process.env.RAZORPAY_KEY_SECRET,
+        });
+
+        const options = {
+            amount: Math.round(amount * 100), // amount in the smallest currency unit (paise)
+            currency: "INR",
+            receipt: `rcpt_${Date.now()}_${Math.random().toString(36).substring(7)}`,
+            notes: {
+                userId: userId.toString(),
+                type,
+                referenceId: referenceId.toString()
+            }
+        };
+
+        const order = await razorpay.orders.create(options);
+
         const payment = await Payment.create({
             user: userId,
             type,
             referenceId,
             referenceModel,
-            amount,
-            status: 'pending'
+            amount: amount,
+            status: 'pending',
+            gatewayOrderId: order.id,
+            gatewayResponse: order
         });
-
-        // TODO: Integrate with actual payment gateway (Razorpay/Stripe)
-        // For now, return payment with mock gateway order ID
-        payment.gatewayOrderId = `ORDER_${Date.now()}`;
-        await payment.save();
 
         return {
             payment,
-            gatewayOrderId: payment.gatewayOrderId,
-            // Add payment gateway specific data here
+            gatewayOrderId: order.id,
+            keyId: process.env.RAZORPAY_KEY_ID,
+            amount: options.amount,
+            currency: options.currency
         };
     },
 
     // Verify payment (callback from gateway)
-    async verifyPayment({ paymentId, gatewayTransactionId, gatewayResponse, success }) {
+    async verifyPayment({ paymentId, gatewayOrderId, gatewayPaymentId, gatewaySignature }) {
         const payment = await Payment.findById(paymentId);
         if (!payment) {
             throw new Error('Payment not found');
         }
 
-        payment.gatewayTransactionId = gatewayTransactionId;
-        payment.gatewayResponse = gatewayResponse;
-        payment.status = success ? 'success' : 'failed';
-        payment.paidAt = success ? new Date() : null;
-        await payment.save();
+        const generated_signature = crypto
+            .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
+            .update(gatewayOrderId + "|" + gatewayPaymentId)
+            .digest('hex');
 
-        // TODO: Update related booking/ticket status
+        if (generated_signature === gatewaySignature) {
+            payment.gatewayTransactionId = gatewayPaymentId;
+            payment.status = 'success'; // Changed from 'paid' to 'success' to match initiatePayment status
+            payment.paidAt = new Date();
+            await payment.save();
 
-        return payment;
+            return { success: true, payment };
+        } else {
+            payment.status = 'failed';
+            await payment.save();
+            throw new Error('Payment verification failed: Invalid signature');
+        }
     },
 
     // Request refund
