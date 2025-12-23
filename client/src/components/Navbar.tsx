@@ -24,14 +24,20 @@ export default function Navbar() {
         return () => window.removeEventListener('scroll', handleScroll);
     }, []);
 
+    // Close menu when route changes
+    useEffect(() => {
+        setIsMenuOpen(false);
+    }, [pathname]);
+
     return (
         <>
-            <nav className="fixed top-4 left-1/2 -translate-x-1/2 z-50 w-auto max-w-3xl transition-all duration-300">
-                <div className={`px-6 py-2.5 rounded-full border shadow-2xl transition-all duration-300 ${isScrolled
+            {/* Floating Navbar - Wider on mobile */}
+            <nav className="fixed top-4 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] md:w-auto md:max-w-3xl transition-all duration-300">
+                <div className={`px-4 md:px-6 py-2.5 rounded-full border shadow-2xl transition-all duration-300 ${isScrolled
                     ? 'bg-black/70 backdrop-blur-sm border-white/10'
                     : 'nav-floating glass-card border-white/10'
                     }`}>
-                    <div className="flex items-center gap-8">
+                    <div className="flex items-center justify-between md:justify-start md:gap-8">
                         {/* Logo */}
                         <Link href="/" className="flex items-center">
                             <img
@@ -88,7 +94,7 @@ export default function Navbar() {
                             </Link>
                         </div>
 
-                        {/* Auth Buttons - Conditional rendering */}
+                        {/* Desktop Auth Buttons */}
                         <div className="hidden md:flex items-center space-x-3">
                             {isLoading ? (
                                 <div className="w-20 h-8 bg-white/10 rounded-full animate-pulse" />
@@ -117,75 +123,110 @@ export default function Navbar() {
                         {/* Mobile Menu Button */}
                         <button
                             onClick={() => setIsMenuOpen(!isMenuOpen)}
-                            className="md:hidden text-gray-400 hover:text-white p-1"
+                            className="md:hidden text-white p-1"
                         >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 {isMenuOpen ? (
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6 18L18 6M6 6l12 12" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                                 ) : (
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 6h16M4 12h16M4 18h16" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
                                 )}
                             </svg>
                         </button>
                     </div>
                 </div>
+            </nav>
 
-                {/* Mobile Menu - Black background */}
-                {isMenuOpen && (
-                    <div className="md:hidden mt-2 bg-black rounded-2xl p-4 border border-white/10">
-                        <div className="flex flex-col space-y-3">
+            {/* Mobile Full Screen Menu - Opens from RIGHT */}
+            {isMenuOpen && (
+                <div className="fixed inset-0 z-40 md:hidden">
+                    {/* Backdrop */}
+                    <div
+                        className="absolute inset-0 bg-black/60"
+                        onClick={() => setIsMenuOpen(false)}
+                    />
+
+                    {/* Full Screen Menu from Right */}
+                    <div className="absolute right-0 top-0 w-full h-full bg-black flex flex-col animate-in slide-in-from-right duration-300">
+                        {/* Header */}
+                        <div className="px-4 py-4 flex items-center justify-between border-b border-white/10">
+                            <Link href="/" onClick={() => setIsMenuOpen(false)}>
+                                <img src="/logo white.png" alt="FIRA" className="w-8 h-8 object-contain" />
+                            </Link>
+                            <button
+                                onClick={() => setIsMenuOpen(false)}
+                                className="text-white p-2"
+                            >
+                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+
+                        {/* Navigation Links */}
+                        <div className="flex-1 px-6 py-8 space-y-2">
                             <Link
                                 href="/venues"
-                                className={`text-sm py-1 transition-colors ${isActive('/venues') ? 'text-white font-semibold' : 'text-gray-400 hover:text-white'
-                                    }`}
+                                onClick={() => setIsMenuOpen(false)}
+                                className={`block text-2xl font-semibold py-3 transition-colors ${isActive('/venues') ? 'text-white' : 'text-gray-400'}`}
                             >
                                 Venues
                             </Link>
                             <Link
                                 href="/events"
-                                className={`text-sm py-1 transition-colors ${isActive('/events') ? 'text-white font-semibold' : 'text-gray-400 hover:text-white'
-                                    }`}
+                                onClick={() => setIsMenuOpen(false)}
+                                className={`block text-2xl font-semibold py-3 transition-colors ${isActive('/events') ? 'text-white' : 'text-gray-400'}`}
                             >
                                 Events
                             </Link>
                             <Link
                                 href="/create"
-                                className={`text-sm py-1 transition-colors ${isActive('/create') ? 'text-white font-semibold' : 'text-gray-400 hover:text-white'
-                                    }`}
+                                onClick={() => setIsMenuOpen(false)}
+                                className={`block text-2xl font-semibold py-3 transition-colors ${isActive('/create') ? 'text-white' : 'text-gray-400'}`}
                             >
                                 Create
                             </Link>
                             <Link
                                 href="/brands"
-                                className={`text-sm py-1 transition-colors ${isActive('/brands') ? 'text-white font-semibold' : 'text-gray-400 hover:text-white'
-                                    }`}
+                                onClick={() => setIsMenuOpen(false)}
+                                className={`block text-2xl font-semibold py-3 transition-colors ${isActive('/brands') ? 'text-white' : 'text-gray-400'}`}
                             >
                                 Brands
                             </Link>
-                            <div className="pt-3 flex flex-col space-y-2 border-t border-white/10">
-                                {isAuthenticated ? (
+                        </div>
+
+                        {/* Auth Section */}
+                        <div className="px-6 py-6 border-t border-white/10">
+                            {isAuthenticated ? (
+                                <Link
+                                    href="/dashboard"
+                                    onClick={() => setIsMenuOpen(false)}
+                                    className="block w-full bg-white text-black py-4 rounded-xl text-center font-semibold text-lg"
+                                >
+                                    Go to Dashboard
+                                </Link>
+                            ) : (
+                                <div className="space-y-3">
                                     <Link
-                                        href="/dashboard"
-                                        className={`text-sm py-1 transition-colors ${isActive('/dashboard') ? 'text-white font-semibold' : 'text-gray-400 hover:text-white'
-                                            }`}
+                                        href="/signup"
+                                        onClick={() => setIsMenuOpen(false)}
+                                        className="block w-full bg-white text-black py-4 rounded-xl text-center font-semibold text-lg"
                                     >
-                                        Dashboard
+                                        Get Started
                                     </Link>
-                                ) : (
-                                    <>
-                                        <Link href="/signin" className="text-gray-400 hover:text-white transition-colors text-sm py-1">
-                                            Sign In
-                                        </Link>
-                                        <Link href="/signup" className="bg-white text-black hover:bg-gray-200 transition-colors px-4 py-2 rounded-full text-sm text-center font-medium">
-                                            Get Started
-                                        </Link>
-                                    </>
-                                )}
-                            </div>
+                                    <Link
+                                        href="/signin"
+                                        onClick={() => setIsMenuOpen(false)}
+                                        className="block w-full text-gray-400 py-3 text-center font-medium"
+                                    >
+                                        Already have an account? Sign In
+                                    </Link>
+                                </div>
+                            )}
                         </div>
                     </div>
-                )}
-            </nav>
+                </div>
+            )}
         </>
     );
 }

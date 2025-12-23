@@ -36,6 +36,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     });
     const [hasBrand, setHasBrand] = useState(false);
     const [hasVenues, setHasVenues] = useState(false);
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
     // Persist sidebar state
     useEffect(() => {
@@ -145,6 +146,121 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
             {/* Main Navbar */}
             <Navbar />
+
+            {/* Mobile Header - Under the floating navbar */}
+            <div className="fixed top-[72px] left-0 right-0 z-30 lg:hidden">
+                <div className="mx-4 px-4 py-3 flex items-center gap-3 bg-black/80 backdrop-blur-sm border border-white/10 rounded-full">
+                    <button
+                        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                        className="w-10 h-10 rounded-full bg-gradient-to-br from-violet-500 to-pink-500 flex items-center justify-center shadow-lg shadow-violet-500/30"
+                    >
+                        <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            {isMobileMenuOpen ? (
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            ) : (
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                            )}
+                        </svg>
+                    </button>
+                    <span className="text-white font-semibold">Welcome, {user?.name?.split(' ')[0] || 'User'}</span>
+                </div>
+            </div>
+
+            {/* Mobile Sidebar Overlay */}
+            {isMobileMenuOpen && (
+                <div className="fixed inset-0 z-40 lg:hidden" style={{ top: '140px' }}>
+                    {/* Backdrop */}
+                    <div
+                        className="absolute inset-0 bg-black/60"
+                        onClick={() => setIsMobileMenuOpen(false)}
+                    />
+
+                    {/* Mobile Sidebar - 3/4 width */}
+                    <aside className="absolute left-0 top-0 bottom-0 w-3/4 bg-black/95 backdrop-blur-xl border-r border-white/[0.08] flex flex-col">
+                        {/* Navigation */}
+                        <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
+                            {navItems.map((item) => {
+                                const isActive = pathname === item.href;
+                                return (
+                                    <Link
+                                        key={item.href}
+                                        href={item.href}
+                                        onClick={() => setIsMobileMenuOpen(false)}
+                                        className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 ${isActive
+                                            ? 'bg-white text-black shadow-lg'
+                                            : 'text-gray-400 hover:bg-white/[0.06] hover:text-white'
+                                            }`}
+                                    >
+                                        <span className="w-5 h-5">{getIcon(item.icon)}</span>
+                                        <span className="font-medium">{item.label}</span>
+                                    </Link>
+                                );
+                            })}
+
+                            {isVenueOwner && (
+                                <>
+                                    <div className="pt-4 pb-2 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                        Venue Management
+                                    </div>
+                                    {venueOwnerItems.map((item) => {
+                                        const isActive = pathname.startsWith(item.href);
+                                        return (
+                                            <Link
+                                                key={item.href}
+                                                href={item.href}
+                                                onClick={() => setIsMobileMenuOpen(false)}
+                                                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 ${isActive
+                                                    ? 'bg-gradient-to-r from-violet-500/20 to-pink-500/20 text-violet-300 border border-violet-500/30'
+                                                    : 'text-gray-400 hover:bg-white/[0.06] hover:text-white'
+                                                    }`}
+                                            >
+                                                <span className="w-5 h-5">{getIcon(item.icon)}</span>
+                                                <span className="font-medium">{item.label}</span>
+                                            </Link>
+                                        );
+                                    })}
+                                </>
+                            )}
+
+                            {hasBrand && (
+                                <>
+                                    <div className="pt-4 pb-2 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                        Brand Profile
+                                    </div>
+                                    <Link
+                                        href="/dashboard/brand"
+                                        onClick={() => setIsMobileMenuOpen(false)}
+                                        className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 ${pathname.startsWith('/dashboard/brand')
+                                            ? 'bg-gradient-to-r from-cyan-500/20 to-blue-500/20 text-cyan-300 border border-cyan-500/30'
+                                            : 'text-gray-400 hover:bg-white/[0.06] hover:text-white'
+                                            }`}
+                                    >
+                                        <span className="w-5 h-5">{getIcon('sparkles')}</span>
+                                        <span className="font-medium">My Brand</span>
+                                    </Link>
+                                </>
+                            )}
+                        </nav>
+
+                        {/* Logout */}
+                        <div className="p-3 border-t border-white/[0.08] bg-black/20">
+                            <button
+                                onClick={() => {
+                                    localStorage.removeItem('fira_token');
+                                    localStorage.removeItem('fira_user');
+                                    window.location.href = '/signin';
+                                }}
+                                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-red-400 hover:bg-red-500/10"
+                            >
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                                </svg>
+                                <span className="font-medium">Logout</span>
+                            </button>
+                        </div>
+                    </aside>
+                </div>
+            )}
 
             {/* Collapsible Sidebar */}
             <aside
@@ -285,7 +401,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             </aside>
 
             {/* Main Content */}
-            <main className={`flex-1 min-h-screen relative z-10 pt-20 transition-all duration-300 ${isExpanded ? 'lg:ml-64' : 'lg:ml-20'
+            <main className={`flex-1 min-h-screen relative z-10 pt-[140px] lg:pt-20 transition-all duration-300 ${isExpanded ? 'lg:ml-64' : 'lg:ml-20'
                 }`}>
                 {children}
             </main>
