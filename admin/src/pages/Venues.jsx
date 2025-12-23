@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import './ApprovalPage.css';
 
 const mockVenues = [
@@ -49,6 +50,7 @@ const mockVenues = [
 ];
 
 export default function Venues() {
+    const navigate = useNavigate();
     const [venues, setVenues] = useState(mockVenues);
     const [filter, setFilter] = useState('all');
     const [search, setSearch] = useState('');
@@ -132,7 +134,7 @@ export default function Venues() {
                         </thead>
                         <tbody>
                             {filteredVenues.map((venue) => (
-                                <tr key={venue.id}>
+                                <tr key={venue.id} onClick={() => navigate(`/venues/${venue.id}`)} style={{ cursor: 'pointer' }}>
                                     <td>
                                         <div className="venue-info">
                                             <div className="venue-thumb">

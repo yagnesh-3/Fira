@@ -3,8 +3,11 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import Sidebar from './components/Sidebar';
 import Dashboard from './pages/Dashboard';
 import Venues from './pages/Venues';
+import VenueDetail from './pages/VenueDetail';
 import Events from './pages/Events';
+import EventDetail from './pages/EventDetail';
 import Brands from './pages/Brands';
+import BrandDetail from './pages/BrandDetail';
 import Users from './pages/Users';
 import Login from './pages/Login';
 import './index.css';
@@ -38,8 +41,11 @@ function App() {
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/venues" element={<Venues />} />
+            <Route path="/venues/:id" element={<VenueDetail />} />
             <Route path="/events" element={<Events />} />
+            <Route path="/events/:id" element={<EventDetail />} />
             <Route path="/brands" element={<Brands />} />
+            <Route path="/brands/:id" element={<BrandDetail />} />
             <Route path="/users" element={<Users />} />
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>

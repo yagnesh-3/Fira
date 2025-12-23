@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import './ApprovalPage.css';
 
 const mockBrands = [
@@ -49,6 +50,7 @@ const mockBrands = [
 ];
 
 export default function Brands() {
+    const navigate = useNavigate();
     const [brands, setBrands] = useState(mockBrands);
     const [filter, setFilter] = useState('all');
     const [search, setSearch] = useState('');
@@ -132,7 +134,7 @@ export default function Brands() {
                         </thead>
                         <tbody>
                             {filteredBrands.map((brand) => (
-                                <tr key={brand.id}>
+                                <tr key={brand.id} onClick={() => navigate(`/brands/${brand.id}`)} style={{ cursor: 'pointer' }}>
                                     <td>
                                         <div className="venue-info">
                                             <div className="avatar">{brand.name.charAt(0)}</div>
