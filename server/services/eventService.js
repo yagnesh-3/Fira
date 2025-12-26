@@ -99,17 +99,87 @@ const eventService = {
     },
 
     // Cancel event
-    async cancelEvent(id) {
-        const event = await Event.findByIdAndUpdate(
-            id,
-            { $set: { status: 'cancelled' } },
-            { new: true }
-        );
+    async cancelEvent(id, reason) {
+        const Ticket = require('../models/Ticket');
+        const Notification = require('../models/Notification');
+        const paymentService = require('./paymentService');
+
+        const event = await Event.findById(id);
         if (!event) {
             throw new Error('Event not found');
         }
-        // TODO: Trigger refunds and notifications
-        return event;
+
+        if (event.status === 'cancelled') {
+            throw new Error('Event is already cancelled');
+        }
+
+        // Find all active tickets for this event
+        const activeTickets = await Ticket.find({
+            event: id,
+            status: 'active'
+        }).populate('user', 'name email');
+
+        let refundResults = {
+            totalTickets: activeTickets.length,
+            refundsInitiated: 0,
+            refundsFailed: 0,
+            totalRefundAmount: 0
+        };
+
+        // Process each ticket
+        for (const ticket of activeTickets) {
+            try {
+                // Cancel the ticket
+                ticket.status = 'cancelled';
+                ticket.cancelledAt = new Date();
+                ticket.cancellationReason = reason || 'Event cancelled by organizer';
+                await ticket.save();
+
+                // If ticket was paid, initiate refund using existing paymentService method
+                if (ticket.payment) {
+                    try {
+                        const refund = await paymentService.requestRefund(ticket.payment, {
+                            reason: 'event_cancelled',
+                            reasonDetails: reason || 'Event was cancelled by the organizer'
+                        });
+                        refundResults.refundsInitiated++;
+                        refundResults.totalRefundAmount += refund.amount;
+                    } catch (refundError) {
+                        console.error(`Refund failed for ticket ${ticket._id}:`, refundError.message);
+                        refundResults.refundsFailed++;
+                    }
+                }
+
+                // Create notification for the user
+                await Notification.create({
+                    user: ticket.user._id,
+                    title: 'Event Cancelled',
+                    message: `The event "${event.name}" has been cancelled. ${ticket.price > 0 ? 'A refund has been initiated for your ticket.' : ''}`,
+                    category: 'event_cancelled',
+                    data: {
+                        eventId: event._id,
+                        ticketId: ticket._id,
+                        refundAmount: ticket.price
+                    }
+                });
+
+            } catch (err) {
+                console.error(`Failed to process ticket ${ticket._id}:`, err);
+                refundResults.refundsFailed++;
+            }
+        }
+
+        // Update event status
+        event.status = 'cancelled';
+        event.cancelledAt = new Date();
+        event.cancellationReason = reason;
+        event.currentAttendees = 0;
+        await event.save();
+
+        return {
+            event,
+            refundResults
+        };
     },
 
     // Request private event access

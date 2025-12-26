@@ -66,12 +66,20 @@ export default function Navbar() {
                     }`}>
                     <div className="flex items-center justify-between md:justify-start md:gap-8">
                         {/* Logo */}
-                        <Link href="/" className="flex items-center">
+                        <Link href="/" className="flex items-center relative">
                             <img
                                 src="/logo white.png"
                                 alt="FIRA"
                                 className="w-7 h-7 object-contain"
                             />
+                            {/* Home indicator - small dot under logo when on home */}
+                            {pathname === '/' && (
+                                <motion.div
+                                    layoutId="navbar-indicator"
+                                    className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-0.5 bg-white rounded-full"
+                                    transition={{ type: "spring", stiffness: 500, damping: 35 }}
+                                />
+                            )}
                         </Link>
 
                         {/* Desktop Navigation with sliding underline */}
@@ -80,20 +88,20 @@ export default function Navbar() {
                                 <Link
                                     key={link.href}
                                     href={link.href}
-                                    className={`relative text-sm transition-colors pb-1.5 ${link.badge ? 'flex items-center gap-1' : ''
+                                    className={`relative text-sm transition-colors ${link.badge ? 'flex items-center gap-1' : ''
                                         } ${isActive(link.href)
                                             ? 'text-white font-semibold'
                                             : 'text-gray-400 hover:text-white'
                                         }`}
                                 >
-                                    <span className="relative">
+                                    <span className="relative py-1">
                                         {link.label}
-                                        {/* Animated underline */}
-                                        {isActive(link.href) && (
+                                        {/* Animated underline - visible only for nav links */}
+                                        {isActive(link.href) && !isActive('/dashboard') && pathname !== '/' && (
                                             <motion.div
-                                                layoutId="navbar-underline"
-                                                className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-3/5 h-0.5 bg-white rounded-full"
-                                                transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                                                layoutId="navbar-indicator"
+                                                className="absolute bottom-0 left-1/2 -translate-x-1/2 w-3/5 h-0.5 bg-white rounded-full"
+                                                transition={{ type: "spring", stiffness: 500, damping: 35 }}
                                             />
                                         )}
                                     </span>
@@ -113,12 +121,19 @@ export default function Navbar() {
                             ) : isAuthenticated ? (
                                 <Link
                                     href="/dashboard"
-                                    className={`text-sm px-4 py-1.5 rounded-full transition-colors ${isActive('/dashboard')
-                                        ? 'bg-white text-black font-medium'
-                                        : 'text-gray-400 hover:text-white hover:bg-white/10'
-                                        }`}
+                                    className="relative text-sm px-4 py-1.5 rounded-full transition-colors overflow-hidden"
                                 >
-                                    Dashboard
+                                    {/* Animated background - visible only for dashboard */}
+                                    {isActive('/dashboard') && (
+                                        <motion.div
+                                            layoutId="navbar-indicator"
+                                            className="absolute inset-0 bg-white rounded-full"
+                                            transition={{ type: "spring", stiffness: 500, damping: 35 }}
+                                        />
+                                    )}
+                                    <span className={`relative z-10 ${isActive('/dashboard') ? 'text-black font-medium' : 'text-gray-400 hover:text-white'}`}>
+                                        Dashboard
+                                    </span>
                                 </Link>
                             ) : (
                                 <>

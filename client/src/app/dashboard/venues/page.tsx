@@ -80,6 +80,11 @@ export default function VenuesPage() {
     const [selectedDate, setSelectedDate] = useState<Date | null>(null);
     const [busyHoursForm, setBusyHoursForm] = useState({ startTime: '09:00', endTime: '18:00', reason: '' });
 
+    // Cancel Venue State
+    const [cancellingVenue, setCancellingVenue] = useState<Venue | null>(null);
+    const [cancelReason, setCancelReason] = useState('');
+    const [isCancelling, setIsCancelling] = useState(false);
+
     useEffect(() => {
         if (!isLoading && !isAuthenticated) {
             router.push('/signin');
@@ -358,6 +363,22 @@ export default function VenuesPage() {
     const prevMonth = () => setCalendarMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() - 1, 1));
     const nextMonth = () => setCalendarMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1, 1));
 
+    const handleCancelVenue = async () => {
+        if (!cancellingVenue) return;
+        setIsCancelling(true);
+        try {
+            await venuesApi.cancel(cancellingVenue._id, cancelReason || 'Cancelled by owner');
+            // Refresh venues list
+            await fetchVenues();
+            setCancellingVenue(null);
+            setCancelReason('');
+        } catch (error) {
+            console.error('Failed to cancel venue:', error);
+        } finally {
+            setIsCancelling(false);
+        }
+    };
+
     if (isLoading || !isAuthenticated) {
         return (
             <DashboardLayout>
@@ -486,15 +507,25 @@ export default function VenuesPage() {
                                                     </span>
                                                 </div>
                                                 {/* Active Toggle */}
-                                                <button
-                                                    onClick={() => toggleVenueStatus(venue)}
-                                                    className={`absolute top-3 right-3 px-2.5 py-1 rounded-full text-xs font-medium backdrop-blur-sm border transition-colors ${venue.isActive !== false
-                                                        ? 'bg-green-500/20 text-green-400 border-green-500/20 hover:bg-green-500/30'
-                                                        : 'bg-red-500/20 text-red-400 border-red-500/20 hover:bg-red-500/30'
-                                                        }`}
-                                                >
-                                                    {venue.isActive !== false ? 'Active' : 'Inactive'}
-                                                </button>
+                                                <div className="absolute top-3 right-3 flex gap-2">
+                                                    <button
+                                                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleVenueStatus(venue); }}
+                                                        className={`px-2.5 py-1 rounded-full text-xs font-medium backdrop-blur-sm border transition-colors ${venue.isActive !== false
+                                                            ? 'bg-green-500/20 text-green-400 border-green-500/20 hover:bg-green-500/30'
+                                                            : 'bg-red-500/20 text-red-400 border-red-500/20 hover:bg-red-500/30'
+                                                            }`}
+                                                    >
+                                                        {venue.isActive !== false ? 'Active' : 'Inactive'}
+                                                    </button>
+                                                    {venue.status !== 'inactive' && (
+                                                        <button
+                                                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); setCancellingVenue(venue); }}
+                                                            className="px-2.5 py-1 rounded-full text-xs font-medium backdrop-blur-sm border bg-red-500/20 text-red-400 border-red-500/20 hover:bg-red-500/30 transition-colors"
+                                                        >
+                                                            Cancel
+                                                        </button>
+                                                    )}
+                                                </div>
                                             </div>
 
                                             {/* Venue Details */}
@@ -1038,6 +1069,77 @@ export default function VenuesPage() {
                     </div>
                 )
             }
+
+            {/* Cancel Venue Modal */}
+            {cancellingVenue && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+                    <div className="bg-[#111] border border-white/10 rounded-2xl w-full max-w-md p-6">
+                        <div className="flex items-center justify-between mb-6">
+                            <h2 className="text-xl font-bold text-white">Cancel Venue</h2>
+                            <button onClick={() => setCancellingVenue(null)} className="text-gray-400 hover:text-white">
+                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+
+                        <div className="space-y-6">
+                            <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4">
+                                <div className="flex items-start gap-3">
+                                    <svg className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                    </svg>
+                                    <div>
+                                        <p className="text-red-400 font-medium">Cancel {cancellingVenue.name}?</p>
+                                        <p className="text-sm text-gray-400 mt-1">
+                                            This will set the venue status to inactive and it will no longer accept new bookings.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm text-gray-400 mb-2">
+                                    Reason for cancellation (optional)
+                                </label>
+                                <textarea
+                                    value={cancelReason}
+                                    onChange={(e) => setCancelReason(e.target.value)}
+                                    placeholder="Let us know why you're cancelling..."
+                                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-gray-500 focus:outline-none focus:border-red-500 resize-none"
+                                    rows={3}
+                                />
+                            </div>
+
+                            <div className="flex gap-3">
+                                <Button
+                                    variant="secondary"
+                                    className="flex-1"
+                                    onClick={() => { setCancellingVenue(null); setCancelReason(''); }}
+                                    disabled={isCancelling}
+                                >
+                                    Keep Venue
+                                </Button>
+                                <Button
+                                    variant="primary"
+                                    className="flex-1 !bg-red-500 hover:!bg-red-600"
+                                    onClick={handleCancelVenue}
+                                    disabled={isCancelling}
+                                >
+                                    {isCancelling ? (
+                                        <span className="flex items-center gap-2">
+                                            <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                            Cancelling...
+                                        </span>
+                                    ) : (
+                                        'Cancel Venue'
+                                    )}
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </DashboardLayout >
     );
 }

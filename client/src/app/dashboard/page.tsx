@@ -191,7 +191,7 @@ export default function DashboardPage() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
                         {quickStats.map((stat) => (
                             <Link key={stat.label} href={stat.href}>
-                                <div className="bg-white/[0.02] backdrop-blur-sm border border-white/[0.08] rounded-2xl p-5 hover:bg-white/[0.04] hover:border-white/[0.12] transition-all duration-300 group cursor-pointer">
+                                <div className="bg-white/[0.02] backdrop-blur-sm border border-white/[0.08] rounded-2xl p-5 hover:bg-white/[0.04] hover:border-white/[0.12] transition-all duration-300 group cursor-pointer h-full">
                                     <div className={`w-12 h-12 rounded-xl ${colorClasses[stat.color]} flex items-center justify-center mb-4 group-hover:scale-105 transition-transform`}>
                                         {getIcon(stat.icon)}
                                     </div>
@@ -203,9 +203,10 @@ export default function DashboardPage() {
                                         )}
                                     </div>
                                     <div className="text-sm text-gray-400">{stat.label}</div>
-                                    {!loading && stat.subValue && (
-                                        <div className="text-xs text-gray-500 mt-1">{stat.subValue}</div>
-                                    )}
+                                    {/* Always render this row to maintain consistent height */}
+                                    <div className="text-xs text-gray-500 mt-1 min-h-[1rem]">
+                                        {!loading && stat.subValue ? stat.subValue : '\u00A0'}
+                                    </div>
                                 </div>
                             </Link>
                         ))}
@@ -256,9 +257,9 @@ export default function DashboardPage() {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {/* Your Organized Events */}
                     <FadeIn delay={0.1}>
-                        <div className="bg-white/[0.02] backdrop-blur-sm border border-white/[0.08] rounded-2xl p-6">
+                        <div className="bg-white/[0.02] backdrop-blur-sm border border-white/[0.08] rounded-2xl p-6 h-full flex flex-col">
                             <h2 className="text-lg font-semibold text-white mb-4">Your Organized Events</h2>
-                            <div className="space-y-4">
+                            <div className="space-y-4 flex-1">
                                 {loading ? (
                                     [...Array(3)].map((_, i) => (
                                         <div key={i} className="flex items-center gap-4 p-3 rounded-xl bg-white/[0.02] border border-white/[0.05]">
@@ -325,9 +326,9 @@ export default function DashboardPage() {
 
                     {/* Recent Activity */}
                     <FadeIn delay={0.2}>
-                        <div className="bg-white/[0.02] backdrop-blur-sm border border-white/[0.08] rounded-2xl p-6">
+                        <div className="bg-white/[0.02] backdrop-blur-sm border border-white/[0.08] rounded-2xl p-6 h-full flex flex-col">
                             <h2 className="text-lg font-semibold text-white mb-4">Recent Activity</h2>
-                            <div className="space-y-4">
+                            <div className="space-y-4 flex-1">
                                 {loading ? (
                                     [...Array(3)].map((_, i) => (
                                         <div key={i} className="flex items-start gap-4">

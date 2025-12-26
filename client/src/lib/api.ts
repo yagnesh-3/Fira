@@ -169,6 +169,11 @@ export const venuesApi = {
             method: 'PUT',
             body: JSON.stringify({ status }),
         }),
+    cancel: (id: string, reason?: string) =>
+        request<{ venue: any; message: string }>(`/venues/${id}/cancel`, {
+            method: 'POST',
+            body: JSON.stringify({ reason }),
+        }),
 };
 
 // Events API

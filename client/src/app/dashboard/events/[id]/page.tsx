@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import DashboardLayout from '@/components/dashboard/DashboardLayout';
-import { Button } from '@/components/ui';
+import { Button, Modal } from '@/components/ui';
 import { eventsApi, ticketsApi } from '@/lib/api';
 import { Event, User, Venue } from '@/lib/types';
 import { useAuth } from '@/contexts/AuthContext';
@@ -35,6 +35,9 @@ export default function DashboardEventDetailPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [copiedCode, setCopiedCode] = useState(false);
     const [copiedLink, setCopiedLink] = useState(false);
+    const [showCancelModal, setShowCancelModal] = useState(false);
+    const [cancelReason, setCancelReason] = useState('');
+    const [cancelling, setCancelling] = useState(false);
 
     useEffect(() => {
         if (!authLoading && !isAuthenticated) {
@@ -99,6 +102,28 @@ export default function DashboardEventDetailPage() {
             currency: 'INR',
             maximumFractionDigits: 0,
         }).format(price);
+    };
+
+    const handleCancelEvent = async () => {
+        if (!event) return;
+        setCancelling(true);
+        try {
+            const result = await eventsApi.cancel(event._id, cancelReason || 'Cancelled by organizer');
+            const refundInfo = result.refundResults;
+            if (refundInfo && refundInfo.refundsInitiated > 0) {
+                showToast(`Event cancelled. ${refundInfo.refundsInitiated} refund(s) initiated totaling ₹${refundInfo.totalRefundAmount}`, 'success');
+            } else {
+                showToast('Event cancelled successfully', 'success');
+            }
+            setShowCancelModal(false);
+            setCancelReason('');
+            // Refresh event data
+            fetchEvent(event._id);
+        } catch (error) {
+            showToast(error instanceof Error ? error.message : 'Failed to cancel event', 'error');
+        } finally {
+            setCancelling(false);
+        }
     };
 
     if (authLoading || !isAuthenticated) {
@@ -166,6 +191,15 @@ export default function DashboardEventDetailPage() {
                         <Link href={`/events/${event._id}`} target="_blank">
                             <Button variant="secondary">View Public Page</Button>
                         </Link>
+                        {event.status !== 'cancelled' && (
+                            <Button
+                                variant="secondary"
+                                className="!bg-red-500/20 !text-red-400 hover:!bg-red-500/30 !border-red-500/30"
+                                onClick={() => setShowCancelModal(true)}
+                            >
+                                Cancel Event
+                            </Button>
+                        )}
                     </div>
                 </div>
 
@@ -195,9 +229,9 @@ export default function DashboardEventDetailPage() {
                             {event.category}
                         </span>
                         <span className={`px-3 py-1.5 rounded-full backdrop-blur-sm text-sm capitalize ${event.status === 'upcoming' ? 'bg-green-500/30 text-green-200' :
-                                event.status === 'ongoing' ? 'bg-blue-500/30 text-blue-200' :
-                                    event.status === 'completed' ? 'bg-gray-500/30 text-gray-200' :
-                                        'bg-red-500/30 text-red-200'
+                            event.status === 'ongoing' ? 'bg-blue-500/30 text-blue-200' :
+                                event.status === 'completed' ? 'bg-gray-500/30 text-gray-200' :
+                                    'bg-red-500/30 text-red-200'
                             }`}>
                             {event.status}
                         </span>
@@ -324,8 +358,8 @@ export default function DashboardEventDetailPage() {
                                                 <p className="text-gray-400 text-sm">{formatPrice(ticket.price)}</p>
                                             </div>
                                             <span className={`px-2 py-1 rounded text-xs ${ticket.isUsed ? 'bg-gray-500/20 text-gray-400' :
-                                                    ticket.status === 'active' ? 'bg-green-500/20 text-green-400' :
-                                                        'bg-red-500/20 text-red-400'
+                                                ticket.status === 'active' ? 'bg-green-500/20 text-green-400' :
+                                                    'bg-red-500/20 text-red-400'
                                                 }`}>
                                                 {ticket.isUsed ? 'Used' : ticket.status}
                                             </span>
@@ -367,8 +401,8 @@ export default function DashboardEventDetailPage() {
                                     <div className="flex items-center justify-between text-sm">
                                         <span className="text-gray-400">Status</span>
                                         <span className={`capitalize ${event.status === 'upcoming' ? 'text-green-400' :
-                                                event.status === 'ongoing' ? 'text-blue-400' :
-                                                    'text-gray-400'
+                                            event.status === 'ongoing' ? 'text-blue-400' :
+                                                'text-gray-400'
                                             }`}>{event.status}</span>
                                     </div>
                                 </div>
@@ -405,6 +439,64 @@ export default function DashboardEventDetailPage() {
                     </div>
                 </div>
             </div>
+
+            {/* Cancel Event Modal */}
+            <Modal isOpen={showCancelModal} onClose={() => setShowCancelModal(false)} title="Cancel Event" size="md">
+                <div className="space-y-6">
+                    <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4">
+                        <div className="flex items-start gap-3">
+                            <svg className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                            </svg>
+                            <div>
+                                <p className="text-red-400 font-medium">This action cannot be undone</p>
+                                <p className="text-sm text-gray-400 mt-1">
+                                    Cancelling this event will notify all ticket holders and may trigger refunds based on your refund policy.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label className="block text-sm text-gray-400 mb-2">
+                            Reason for cancellation (optional)
+                        </label>
+                        <textarea
+                            value={cancelReason}
+                            onChange={(e) => setCancelReason(e.target.value)}
+                            placeholder="Let attendees know why you're cancelling..."
+                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-gray-500 focus:outline-none focus:border-red-500 resize-none"
+                            rows={3}
+                        />
+                    </div>
+
+                    <div className="flex gap-3">
+                        <Button
+                            variant="secondary"
+                            className="flex-1"
+                            onClick={() => setShowCancelModal(false)}
+                            disabled={cancelling}
+                        >
+                            Keep Event
+                        </Button>
+                        <Button
+                            variant="primary"
+                            className="flex-1 !bg-red-500 hover:!bg-red-600"
+                            onClick={handleCancelEvent}
+                            disabled={cancelling}
+                        >
+                            {cancelling ? (
+                                <span className="flex items-center gap-2">
+                                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                    Cancelling...
+                                </span>
+                            ) : (
+                                'Cancel Event'
+                            )}
+                        </Button>
+                    </div>
+                </div>
+            </Modal>
         </DashboardLayout>
     );
 }
