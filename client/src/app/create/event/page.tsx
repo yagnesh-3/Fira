@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import PartyBackground from '@/components/PartyBackground';
@@ -11,7 +11,8 @@ import { eventsApi, venuesApi, uploadApi } from '@/lib/api';
 
 const categories = ['party', 'concert', 'wedding', 'corporate', 'birthday', 'festival', 'other'];
 
-export default function CreateEventPage() {
+// Inner component that uses useSearchParams
+function CreateEventForm() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const preselectedVenueId = searchParams.get('venue');
@@ -443,5 +444,22 @@ export default function CreateEventPage() {
                 </div>
             </main>
         </>
+    );
+}
+
+// Wrap with Suspense for useSearchParams
+export default function CreateEventPage() {
+    return (
+        <Suspense fallback={
+            <>
+                <PartyBackground />
+                <Navbar />
+                <main className="min-h-screen flex items-center justify-center">
+                    <div className="animate-spin w-8 h-8 border-2 border-violet-500 border-t-transparent rounded-full" />
+                </main>
+            </>
+        }>
+            <CreateEventForm />
+        </Suspense>
     );
 }
