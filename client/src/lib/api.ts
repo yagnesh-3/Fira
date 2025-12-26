@@ -243,6 +243,26 @@ export const eventsApi = {
             method: 'PUT',
             body: JSON.stringify({ status }),
         }),
+    // Venue owner approval
+    getVenueRequests: (userId: string, params?: Record<string, string>) => {
+        const query = new URLSearchParams({ userId, ...params }).toString();
+        return request(`/events/venue-requests?${query}`);
+    },
+    venueApprove: (eventId: string, data: { venueOwnerId: string; status: 'approved' | 'rejected'; rejectionReason?: string }) =>
+        request(`/events/${eventId}/venue-approve`, {
+            method: 'POST',
+            body: JSON.stringify(data),
+        }),
+    // Admin approval
+    getAdminPending: (params?: Record<string, string>) => {
+        const query = params ? '?' + new URLSearchParams(params).toString() : '';
+        return request(`/events/admin-pending${query}`);
+    },
+    adminApprove: (eventId: string, data: { adminId: string; status: 'approved' | 'rejected'; rejectionReason?: string }) =>
+        request(`/events/${eventId}/admin-approve`, {
+            method: 'POST',
+            body: JSON.stringify(data),
+        }),
 };
 
 // Bookings API

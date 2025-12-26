@@ -557,11 +557,17 @@ export default function VenueDetailPage() {
             >
                 <div className="space-y-4">
                     <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-2">Selected Date</label>
-                        <div className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white">
-                            {selectedDate ? formatDateForDisplay(selectedDate) : 'Please select a date from the calendar'}
-                        </div>
-                        <p className="text-xs text-gray-500 mt-1">Select a different date from the calendar above if needed</p>
+                        <label className="block text-sm font-medium text-gray-300 mb-2">Select Date</label>
+                        <input
+                            type="date"
+                            value={bookingData.date || selectedDate || ''}
+                            onChange={(e) => {
+                                setBookingData({ ...bookingData, date: e.target.value });
+                                setSelectedDate(e.target.value);
+                            }}
+                            min={new Date().toISOString().split('T')[0]}
+                            className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-violet-500/50 [color-scheme:dark]"
+                        />
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                         <div>

@@ -1,52 +1,61 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { FadeIn, SlideUp, StaggerContainer, StaggerItem } from './animations';
+import { eventsApi } from '@/lib/api';
 
-const parties = [
-    {
-        id: 1,
-        title: 'Neon Nights: EDM Festival',
-        date: 'Dec 28',
-        time: '9 PM',
-        venue: 'Skyline Rooftop, LA',
-        image: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=600&h=400&fit=crop',
-        price: '$45',
-        attendees: 342,
-    },
-    {
-        id: 2,
-        title: "New Year's Eve Gala",
-        date: 'Dec 31',
-        time: '8 PM',
-        venue: 'The Grand Ballroom, NY',
-        image: 'https://images.unsplash.com/photo-1530103862676-de8c9debad1d?w=600&h=400&fit=crop',
-        price: '$150',
-        attendees: 489,
-    },
-    {
-        id: 3,
-        title: 'Beach Sunset Party',
-        date: 'Jan 12',
-        time: '4 PM',
-        venue: 'Ocean View Estate, Miami',
-        image: 'https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?w=600&h=400&fit=crop',
-        price: '$35',
-        attendees: 278,
-    },
-    {
-        id: 4,
-        title: 'Tech Startup Mixer',
-        date: 'Jan 5',
-        time: '6 PM',
-        venue: 'Industrial Loft, Brooklyn',
-        image: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=600&h=400&fit=crop',
-        price: 'Free',
-        attendees: 156,
-    },
-];
+interface Event {
+    _id: string;
+    name: string;
+    date: string;
+    startTime: string;
+    venue?: { name: string; address?: { city: string } };
+    venueName?: string;
+    images: string[];
+    ticketPrice?: number;
+    currentAttendees?: number;
+}
 
 export default function PartiesSection() {
+    const [parties, setParties] = useState<Event[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchParties = async () => {
+            try {
+                const response = await eventsApi.getAll({ sort: 'upcoming', limit: '4' }) as { events: Event[] };
+                setParties(response.events || []);
+            } catch (error) {
+                console.error('Failed to fetch parties:', error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchParties();
+    }, []);
+
+    const formatDate = (dateStr: string) => {
+        const date = new Date(dateStr);
+        const day = date.getDate();
+        const month = date.toLocaleDateString('en-US', { month: 'short' });
+        return { day, month };
+    };
+
+    const formatTime = (time: string) => {
+        if (!time) return '';
+        const [hours, minutes] = time.split(':');
+        const h = parseInt(hours);
+        const ampm = h >= 12 ? 'PM' : 'AM';
+        const hour12 = h % 12 || 12;
+        return `${hour12}${minutes !== '00' ? ':' + minutes : ''} ${ampm}`;
+    };
+
+    const formatPrice = (price?: number) => {
+        if (!price || price === 0) return 'Free';
+        return `₹${price.toLocaleString()}`;
+    };
+
     return (
         <FadeIn>
             <section id="parties-section" className="relative min-h-screen py-24 px-4 sm:px-6 lg:px-8 flex items-center">
@@ -68,54 +77,90 @@ export default function PartiesSection() {
                                 </div>
                             </SlideUp>
 
-                            {/* Parties Grid */}
-                            <StaggerContainer className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                                {parties.map((party) => (
-                                    <StaggerItem key={party.id}>
-                                        <div className="glass-card overflow-hidden group cursor-pointer h-full hover:-translate-y-1 transition-transform duration-300">
-                                            {/* Image */}
-                                            <div className="relative h-40 overflow-hidden">
-                                                <img
-                                                    src={party.image}
-                                                    alt={party.title}
-                                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                                                />
-                                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
-
-                                                {/* Date Badge */}
-                                                <div className="absolute top-3 left-3 text-white">
-                                                    <div className="text-lg font-bold">{party.date.split(' ')[1]}</div>
-                                                    <div className="text-xs text-gray-300">{party.date.split(' ')[0]}</div>
-                                                </div>
-
-                                                {/* Price */}
-                                                <div className="absolute bottom-3 right-3">
-                                                    <span className={`text-sm font-medium ${party.price === 'Free' ? 'text-emerald-400' : 'text-white'}`}>
-                                                        {party.price}
-                                                    </span>
-                                                </div>
-                                            </div>
-
-                                            {/* Content */}
-                                            <div className="p-4">
-                                                <h3 className="text-sm font-medium text-white mb-1 line-clamp-1 group-hover:text-violet-400 transition-colors">
-                                                    {party.title}
-                                                </h3>
-                                                <p className="text-gray-500 text-xs flex items-center gap-1 mb-2">
-                                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                                                    </svg>
-                                                    {party.venue}
-                                                </p>
-                                                <div className="flex items-center justify-between text-xs text-gray-600">
-                                                    <span>{party.time}</span>
-                                                    <span>{party.attendees}+ going</span>
-                                                </div>
+                            {/* Loading Skeleton */}
+                            {isLoading && (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                                    {[1, 2, 3, 4].map((i) => (
+                                        <div key={i} className="glass-card overflow-hidden animate-pulse">
+                                            <div className="h-40 bg-white/10"></div>
+                                            <div className="p-4 space-y-2">
+                                                <div className="h-4 bg-white/10 rounded w-3/4"></div>
+                                                <div className="h-3 bg-white/10 rounded w-1/2"></div>
                                             </div>
                                         </div>
-                                    </StaggerItem>
-                                ))}
-                            </StaggerContainer>
+                                    ))}
+                                </div>
+                            )}
+
+                            {/* Empty State */}
+                            {!isLoading && parties.length === 0 && (
+                                <div className="text-center py-12">
+                                    <p className="text-gray-400 text-lg">No upcoming events found</p>
+                                    <Link href="/events" className="text-violet-400 hover:text-violet-300 mt-2 inline-block">
+                                        Browse all events →
+                                    </Link>
+                                </div>
+                            )}
+
+                            {/* Parties Grid */}
+                            {!isLoading && parties.length > 0 && (
+                                <StaggerContainer className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                                    {parties.map((party) => {
+                                        const { day, month } = formatDate(party.date);
+                                        const venueName = party.venue?.name || party.venueName || 'Venue TBA';
+                                        const venueCity = party.venue?.address?.city || '';
+                                        const displayVenue = venueCity ? `${venueName}, ${venueCity}` : venueName;
+
+                                        return (
+                                            <StaggerItem key={party._id}>
+                                                <Link href={`/events/${party._id}`}>
+                                                    <div className="glass-card overflow-hidden group cursor-pointer h-full hover:-translate-y-1 transition-transform duration-300">
+                                                        {/* Image */}
+                                                        <div className="relative h-40 overflow-hidden">
+                                                            <img
+                                                                src={party.images?.[0] || 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=600&h=400&fit=crop'}
+                                                                alt={party.name}
+                                                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                                            />
+                                                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
+
+                                                            {/* Date Badge */}
+                                                            <div className="absolute top-3 left-3 text-white">
+                                                                <div className="text-lg font-bold">{day}</div>
+                                                                <div className="text-xs text-gray-300">{month}</div>
+                                                            </div>
+
+                                                            {/* Price */}
+                                                            <div className="absolute bottom-3 right-3">
+                                                                <span className={`text-sm font-medium ${!party.ticketPrice ? 'text-emerald-400' : 'text-white'}`}>
+                                                                    {formatPrice(party.ticketPrice)}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Content */}
+                                                        <div className="p-4">
+                                                            <h3 className="text-sm font-medium text-white mb-1 line-clamp-1 group-hover:text-violet-400 transition-colors">
+                                                                {party.name}
+                                                            </h3>
+                                                            <p className="text-gray-500 text-xs flex items-center gap-1 mb-2">
+                                                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                                                </svg>
+                                                                {displayVenue}
+                                                            </p>
+                                                            <div className="flex items-center justify-between text-xs text-gray-600">
+                                                                <span>{formatTime(party.startTime)}</span>
+                                                                <span>{(party.currentAttendees || 0)}+ going</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </Link>
+                                            </StaggerItem>
+                                        );
+                                    })}
+                                </StaggerContainer>
+                            )}
 
                             {/* View More Button */}
                             <SlideUp delay={0.3}>

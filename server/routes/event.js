@@ -22,6 +22,30 @@ router.get('/upcoming', async (req, res) => {
     }
 });
 
+// GET /api/events/venue-requests - Get events pending venue approval (for venue owners)
+router.get('/venue-requests', async (req, res) => {
+    try {
+        const { userId } = req.query;
+        if (!userId) {
+            return res.status(400).json({ error: 'userId is required' });
+        }
+        const result = await eventService.getVenueEventRequests(userId, req.query);
+        res.json(result);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// GET /api/events/admin-pending - Get events pending admin approval
+router.get('/admin-pending', async (req, res) => {
+    try {
+        const result = await eventService.getPendingAdminApproval(req.query);
+        res.json(result);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // GET /api/events/:id - Get event by ID
 router.get('/:id', async (req, res) => {
     try {
@@ -88,6 +112,34 @@ router.put('/:id/access/:requestId', async (req, res) => {
     try {
         const result = await eventService.handleAccessRequest(req.params.requestId, req.body.status);
         res.json(result);
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+});
+
+// POST /api/events/:id/venue-approve - Venue owner approves/rejects event
+router.post('/:id/venue-approve', async (req, res) => {
+    try {
+        const { venueOwnerId, status, rejectionReason } = req.body;
+        if (!venueOwnerId || !status) {
+            return res.status(400).json({ error: 'venueOwnerId and status are required' });
+        }
+        const event = await eventService.venueApproveEvent(req.params.id, venueOwnerId, { status, rejectionReason });
+        res.json(event);
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+});
+
+// POST /api/events/:id/admin-approve - Admin approves/rejects event
+router.post('/:id/admin-approve', async (req, res) => {
+    try {
+        const { adminId, status, rejectionReason } = req.body;
+        if (!adminId || !status) {
+            return res.status(400).json({ error: 'adminId and status are required' });
+        }
+        const event = await eventService.adminApproveEvent(req.params.id, adminId, { status, rejectionReason });
+        res.json(event);
     } catch (error) {
         res.status(400).json({ error: error.message });
     }

@@ -82,7 +82,32 @@ const eventSchema = new mongoose.Schema({
     status: {
         type: String,
         enum: ['draft', 'pending', 'upcoming', 'approved', 'ongoing', 'completed', 'cancelled', 'rejected', 'blocked'],
-        default: 'draft'
+        default: 'pending'
+    },
+    // Dual approval system
+    venueApproval: {
+        status: {
+            type: String,
+            enum: ['pending', 'approved', 'rejected'],
+            default: 'pending'
+        },
+        respondedAt: Date,
+        respondedBy: String,
+        rejectionReason: String
+    },
+    adminApproval: {
+        status: {
+            type: String,
+            enum: ['pending', 'approved', 'rejected'],
+            default: 'pending'
+        },
+        respondedAt: Date,
+        respondedBy: String,
+        rejectionReason: String
+    },
+    isActive: {
+        type: Boolean,
+        default: true
     },
     isFeatured: {
         type: Boolean,

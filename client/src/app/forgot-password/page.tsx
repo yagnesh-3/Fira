@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Button, Input } from '@/components/ui';
+import { Button, Input, OTPInput } from '@/components/ui';
 import Navbar from '@/components/Navbar';
 import PartyBackground from '@/components/PartyBackground';
 import { authApi } from '@/lib/api';
@@ -185,22 +185,19 @@ export default function ForgotPasswordPage() {
 
                         {/* Step 2: OTP Verification */}
                         {step === 'otp' && (
-                            <form onSubmit={handleVerifyOTP} className="space-y-5">
-                                <Input
-                                    label="Reset Code"
-                                    type="text"
-                                    placeholder="1234"
-                                    value={formData.otp}
-                                    onChange={(e) => setFormData({ ...formData, otp: e.target.value.replace(/\D/g, '').slice(0, 4) })}
-                                    required
-                                    maxLength={4}
-                                    className="text-center text-2xl tracking-widest"
-                                    leftIcon={
-                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                                        </svg>
-                                    }
-                                />
+                            <form onSubmit={handleVerifyOTP} className="space-y-6">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-300 mb-4 text-center">
+                                        Enter verification code
+                                    </label>
+                                    <OTPInput
+                                        length={4}
+                                        value={formData.otp}
+                                        onChange={(value) => setFormData({ ...formData, otp: value })}
+                                        disabled={isLoading}
+                                        error={!!error}
+                                    />
+                                </div>
 
                                 <Button
                                     type="submit"
@@ -217,7 +214,7 @@ export default function ForgotPasswordPage() {
                                     <button
                                         type="button"
                                         onClick={handleResendOTP}
-                                        className="text-violet-400 hover:text-violet-300 text-sm transition-colors"
+                                        className="text-violet-400 hover:text-violet-300 text-sm transition-colors disabled:text-gray-500 disabled:cursor-not-allowed"
                                         disabled={isLoading}
                                     >
                                         Didn&apos;t receive code? Resend
