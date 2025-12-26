@@ -15,9 +15,10 @@ const eventService = {
             filter.organizer = organizer;
             if (status) filter.status = status;
         } else {
-            // Public listing - show approved or upcoming events
+            // Public listing - show approved or upcoming events that are in the future
             filter.status = { $in: ['approved', 'upcoming'] };
             filter.isActive = { $ne: false };
+            filter.date = { $gte: new Date() }; // Only future events
         }
 
         if (search) {
