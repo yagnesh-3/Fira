@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { FadeIn } from './animations';
 
-const rotatingWords = ['FIRA', 'Celebrate', 'FIRA', 'Party', 'FIRA', 'Dance'];
+const rotatingWords = ['FIRA', 'Celebrate', 'Party', 'Dance'];
 
 export default function Hero() {
     const [wordIndex, setWordIndex] = useState(0);
@@ -28,7 +28,7 @@ export default function Hero() {
     };
 
     return (
-        <section className="relative min-h-screen flex items-center justify-center pt-24">
+        <section className="relative min-h-screen flex items-center justify-center pt-10">
             <div className="relative z-10 w-full max-w-5xl mx-auto px-6 sm:px-8 lg:px-12 py-20 text-center">
 
                 {/* Hero Content - Center aligned with proper text alignment */}
