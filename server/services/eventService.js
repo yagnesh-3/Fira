@@ -331,6 +331,9 @@ const eventService = {
         // If both approved, set to approved
         else if (status === 'approved' && event.adminApproval?.status === 'approved') {
             event.status = 'approved';
+
+            // Mark event dates as booked in venue daySlots
+            await this.updateVenueAvailability(event);
         }
 
         await event.save();
@@ -374,6 +377,9 @@ const eventService = {
             const venueApproved = !event.venueApproval || event.venueApproval.status === 'approved' || !event.venueApproval.status;
             if (venueApproved) {
                 event.status = 'approved';
+
+                // Mark event dates as booked in venue daySlots
+                await this.updateVenueAvailability(event);
             }
         }
 
@@ -454,6 +460,116 @@ const eventService = {
             currentPage: parseInt(page),
             total
         };
+    },
+
+    // Helper: Update venue availability when event is approved
+    async updateVenueAvailability(event) {
+        const Venue = require('../models/Venue');
+
+        if (!event.venue) return;
+
+        const venueId = event.venue._id || event.venue;
+        const venue = await Venue.findById(venueId);
+        if (!venue) return;
+
+        // Get all dates between event start and end
+        const startDate = new Date(event.date);
+        startDate.setHours(0, 0, 0, 0); // Reset to start of day
+
+        const endDate = event.endDate ? new Date(event.endDate) : new Date(event.date);
+        endDate.setHours(23, 59, 59, 999); // Set to end of day
+
+        const datesToBook = [];
+        const currentDate = new Date(startDate);
+
+        // Iterate through all days from start to end (inclusive)
+        while (currentDate <= endDate) {
+            datesToBook.push(new Date(currentDate));
+            currentDate.setDate(currentDate.getDate() + 1);
+        }
+
+        console.log(`[updateVenueAvailability] Event: ${event.name}, Dates to book:`, datesToBook.map(d => d.toISOString().split('T')[0]));
+
+        // Update or add daySlots for each event date
+        const totalDays = datesToBook.length;
+        for (let i = 0; i < totalDays; i++) {
+            const date = datesToBook[i];
+            const dateStr = date.toISOString().split('T')[0];
+            const isFirstDay = i === 0;
+            const isLastDay = i === totalDays - 1;
+            const isSingleDay = totalDays === 1;
+
+            // Determine the correct time slot for this day
+            let slotStartTime, slotEndTime;
+
+            if (isSingleDay) {
+                // Single day event: use actual start and end times
+                slotStartTime = event.startTime;
+                slotEndTime = event.endTime;
+            } else if (isFirstDay) {
+                // First day: from event start time to end of day
+                slotStartTime = event.startTime;
+                slotEndTime = '23:59';
+            } else if (isLastDay) {
+                // Last day: from start of day to event end time
+                slotStartTime = '00:00';
+                slotEndTime = event.endTime;
+            } else {
+                // Middle days: full 24 hours
+                slotStartTime = '00:00';
+                slotEndTime = '23:59';
+            }
+
+            // Find existing slot for this date
+            const existingSlotIndex = venue.daySlots.findIndex(slot => {
+                const slotDate = new Date(slot.date).toISOString().split('T')[0];
+                return slotDate === dateStr;
+            });
+
+            if (existingSlotIndex >= 0) {
+                // Update existing slot
+                venue.daySlots[existingSlotIndex].isAvailable = false;
+                venue.daySlots[existingSlotIndex].isBooked = true;
+                venue.daySlots[existingSlotIndex].bookedBy = event.organizer;
+            } else {
+                // Add new slot
+                venue.daySlots.push({
+                    date: date,
+                    isAvailable: false,
+                    isBooked: true,
+                    bookedBy: event.organizer
+                });
+            }
+
+            // Also add to blockedDates for backward compatibility
+            const existingBlockedIndex = venue.blockedDates.findIndex(blocked => blocked.date === dateStr);
+            const bookedSlot = {
+                startTime: slotStartTime,
+                endTime: slotEndTime,
+                type: 'booked'
+            };
+
+            if (existingBlockedIndex === -1) {
+                // Add new blockedDate entry
+                venue.blockedDates.push({
+                    date: dateStr,
+                    slots: [bookedSlot]
+                });
+            } else {
+                // Update existing entry - add booked slot if not already there
+                const existingSlots = venue.blockedDates[existingBlockedIndex].slots;
+                const hasBookedSlot = existingSlots.some(s =>
+                    s.startTime === slotStartTime && s.endTime === slotEndTime && s.type === 'booked'
+                );
+                if (!hasBookedSlot) {
+                    venue.blockedDates[existingBlockedIndex].slots.push(bookedSlot);
+                }
+            }
+
+            console.log(`[updateVenueAvailability] Added blockedDate: ${dateStr} with slot ${slotStartTime}-${slotEndTime}`);
+        }
+
+        await venue.save();
     }
 };
 

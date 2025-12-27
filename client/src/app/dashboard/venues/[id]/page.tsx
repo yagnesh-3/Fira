@@ -43,6 +43,7 @@ interface EventRequest {
     name: string;
     description: string;
     date: string;
+    endDate?: string;
     startTime: string;
     endTime: string;
     organizer: { _id: string; name: string; email: string };
@@ -620,46 +621,6 @@ export default function VenueManagePage() {
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     {/* Main Content */}
                     <div className="lg:col-span-2 space-y-6">
-                        {/* Name & Location */}
-                        <div className="bg-white/[0.02] border border-white/[0.08] rounded-2xl p-6">
-                            {isEditMode ? (
-                                <div className="space-y-4">
-                                    <div>
-                                        <label className="block text-sm text-gray-400 mb-1">Venue Name</label>
-                                        <Input value={editForm.name} onChange={(e) => setEditForm(prev => ({ ...prev, name: e.target.value }))} className="text-xl font-bold" />
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div>
-                                            <label className="block text-sm text-gray-400 mb-1">Street</label>
-                                            <Input value={editForm.street} onChange={(e) => setEditForm(prev => ({ ...prev, street: e.target.value }))} />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm text-gray-400 mb-1">City</label>
-                                            <Input value={editForm.city} onChange={(e) => setEditForm(prev => ({ ...prev, city: e.target.value }))} />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm text-gray-400 mb-1">State</label>
-                                            <Input value={editForm.state} onChange={(e) => setEditForm(prev => ({ ...prev, state: e.target.value }))} />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm text-gray-400 mb-1">Pincode</label>
-                                            <Input value={editForm.pincode} onChange={(e) => setEditForm(prev => ({ ...prev, pincode: e.target.value }))} />
-                                        </div>
-                                    </div>
-                                </div>
-                            ) : (
-                                <>
-                                    <h1 className="text-3xl font-bold text-white mb-3">{venue.name}</h1>
-                                    <div className="flex items-center gap-2 text-gray-400">
-                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                                        </svg>
-                                        <span>{venue.address.street}, {venue.address.city}, {venue.address.state}</span>
-                                    </div>
-                                </>
-                            )}
-                        </div>
-
                         {/* Description */}
                         <div className="bg-white/[0.02] border border-white/[0.08] rounded-2xl p-6">
                             <h2 className="text-xl font-semibold text-white mb-4">About this venue</h2>
@@ -834,8 +795,8 @@ export default function VenueManagePage() {
                             ) : (
                                 <div className="space-y-3 max-h-[350px] overflow-y-auto">
                                     {eventRequests.map((event) => (
-                                        <div key={event._id} className="p-3 rounded-xl bg-black/30 border border-white/5">
-                                            <div className="flex items-center gap-2 mb-1">
+                                        <div key={event._id} className="p-4 rounded-xl bg-black/30 border border-white/5">
+                                            <div className="flex items-center gap-2 mb-2">
                                                 <span className={`px-2 py-0.5 rounded text-xs ${event.eventType === 'private'
                                                     ? 'bg-violet-500/20 text-violet-400'
                                                     : 'bg-green-500/20 text-green-400'
@@ -843,33 +804,49 @@ export default function VenueManagePage() {
                                                     {event.eventType}
                                                 </span>
                                             </div>
-                                            <p className="text-white font-medium text-sm">{event.name}</p>
-                                            <p className="text-gray-400 text-xs">
+                                            <p className="text-white font-medium">{event.name}</p>
+                                            <p className="text-gray-400 text-sm mt-1">
                                                 by {event.organizer?.name || 'Unknown'}
                                             </p>
-                                            <p className="text-gray-500 text-xs mt-1">
-                                                {new Date(event.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
-                                                {' • '}{event.startTime}
-                                            </p>
+                                            <div className="mt-2 text-gray-500 text-xs space-y-1">
+                                                <p className="flex items-center gap-1">
+                                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                                    </svg>
+                                                    {new Date(event.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                                    {event.endDate && event.endDate !== event.date && (
+                                                        <> - {new Date(event.endDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</>
+                                                    )}
+                                                </p>
+                                                <p className="flex items-center gap-1">
+                                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                    </svg>
+                                                    {event.startTime} - {event.endTime}
+                                                </p>
+                                                <p className="flex items-center gap-1">
+                                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                                                    </svg>
+                                                    {event.maxAttendees} max attendees
+                                                </p>
+                                            </div>
                                             {event.venueApproval?.status === 'pending' && (
-                                                <div className="flex gap-2 mt-2">
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
+                                                <div className="flex gap-2 mt-3">
+                                                    <button
                                                         onClick={() => handleEventApproval(event._id, 'rejected')}
                                                         disabled={processingEventId === event._id}
-                                                        className="flex-1 text-xs"
+                                                        className="flex-1 px-3 py-2 rounded-lg text-sm font-medium bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30 transition-colors disabled:opacity-50"
                                                     >
                                                         Reject
-                                                    </Button>
-                                                    <Button
-                                                        size="sm"
+                                                    </button>
+                                                    <button
                                                         onClick={() => handleEventApproval(event._id, 'approved')}
                                                         disabled={processingEventId === event._id}
-                                                        className="flex-1 text-xs"
+                                                        className="flex-1 px-3 py-2 rounded-lg text-sm font-medium bg-green-500/20 text-green-400 border border-green-500/30 hover:bg-green-500/30 transition-colors disabled:opacity-50"
                                                     >
                                                         {processingEventId === event._id ? '...' : 'Approve'}
-                                                    </Button>
+                                                    </button>
                                                 </div>
                                             )}
                                         </div>
@@ -880,7 +857,48 @@ export default function VenueManagePage() {
                     </div>
 
                     {/* Sidebar - Venue Stats */}
+
                     <div className="lg:col-span-1">
+                        {/* Name & Location */}
+                        <div className="bg-white/[0.02] border border-white/[0.08] rounded-2xl p-6 mb-6">
+                            {isEditMode ? (
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="block text-sm text-gray-400 mb-1">Venue Name</label>
+                                        <Input value={editForm.name} onChange={(e) => setEditForm(prev => ({ ...prev, name: e.target.value }))} className="text-xl font-bold" />
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-sm text-gray-400 mb-1">Street</label>
+                                            <Input value={editForm.street} onChange={(e) => setEditForm(prev => ({ ...prev, street: e.target.value }))} />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm text-gray-400 mb-1">City</label>
+                                            <Input value={editForm.city} onChange={(e) => setEditForm(prev => ({ ...prev, city: e.target.value }))} />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm text-gray-400 mb-1">State</label>
+                                            <Input value={editForm.state} onChange={(e) => setEditForm(prev => ({ ...prev, state: e.target.value }))} />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm text-gray-400 mb-1">Pincode</label>
+                                            <Input value={editForm.pincode} onChange={(e) => setEditForm(prev => ({ ...prev, pincode: e.target.value }))} />
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : (
+                                <>
+                                    <h1 className="text-3xl font-bold text-white mb-3">{venue.name}</h1>
+                                    <div className="flex items-center gap-2 text-gray-400">
+                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                        </svg>
+                                        <span>{venue.address.street}, {venue.address.city}, {venue.address.state}</span>
+                                    </div>
+                                </>
+                            )}
+                        </div>
+
                         <div className="space-y-6">
                             {/* Stats Card */}
                             <div className="bg-white/[0.02] border border-white/[0.08] rounded-2xl p-6">

@@ -293,7 +293,7 @@ function CreateEventForm() {
                                             type="time"
                                             value={formData.startTime}
                                             onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
-                                            className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-violet-500/50"
+                                            className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-violet-500/50 [color-scheme:dark]"
                                         />
                                     </div>
                                     <div>
@@ -302,7 +302,7 @@ function CreateEventForm() {
                                             type="time"
                                             value={formData.endTime}
                                             onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
-                                            className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-violet-500/50"
+                                            className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-violet-500/50 [color-scheme:dark]"
                                         />
                                     </div>
                                 </div>

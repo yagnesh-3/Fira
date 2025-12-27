@@ -13,7 +13,7 @@ const brandService = {
             sort = 'newest'
         } = query;
 
-        const filter = { isActive: true };
+        const filter = { isActive: true, status: 'approved' };
 
         if (type && type !== 'All') {
             filter.type = type.toLowerCase();
