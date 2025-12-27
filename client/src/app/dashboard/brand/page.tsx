@@ -59,6 +59,15 @@ export default function BrandDashboardPage() {
     const [profilePreview, setProfilePreview] = useState('');
     const [coverPreview, setCoverPreview] = useState('');
 
+    // Posts state
+    const [posts, setPosts] = useState<any[]>([]);
+    const [showPostModal, setShowPostModal] = useState(false);
+    const [postContent, setPostContent] = useState('');
+    const [postImages, setPostImages] = useState<File[]>([]);
+    const [postImagePreviews, setPostImagePreviews] = useState<string[]>([]);
+    const [isCreatingPost, setIsCreatingPost] = useState(false);
+    const [editingPost, setEditingPost] = useState<any>(null);
+
     useEffect(() => {
         if (!isLoading && !isAuthenticated) {
             router.push('/signin');
@@ -158,6 +167,102 @@ export default function BrandDashboardPage() {
         if (file) {
             setCoverPhotoFile(file);
             setCoverPreview(URL.createObjectURL(file));
+        }
+    };
+
+    // Fetch brand posts
+    const fetchPosts = async () => {
+        if (!brand?._id) return;
+        try {
+            const result = await brandsApi.getPosts(brand._id) as { posts: any[] };
+            setPosts(result.posts || []);
+        } catch (err) {
+            console.error('Failed to fetch posts:', err);
+        }
+    };
+
+    // Fetch posts when brand loads
+    useEffect(() => {
+        if (brand?._id) {
+            fetchPosts();
+        }
+    }, [brand?._id]);
+
+    // Handle post image add (local preview only)
+    const handlePostImageAdd = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = Array.from(e.target.files || []);
+        if (files.length > 0) {
+            setPostImages(prev => [...prev, ...files]);
+            setPostImagePreviews(prev => [...prev, ...files.map(f => URL.createObjectURL(f))]);
+        }
+    };
+
+    // Reset post form
+    const resetPostForm = () => {
+        setPostContent('');
+        setPostImages([]);
+        setPostImagePreviews([]);
+        setEditingPost(null);
+        setShowPostModal(false);
+    };
+
+    // Create or Update post
+    const handleCreatePost = async () => {
+        if (!brand?._id || !user?._id || !postContent.trim()) return;
+
+        setIsCreatingPost(true);
+        try {
+            // Upload images to Cloudinary first (only on submit)
+            let imageUrls: string[] = [];
+            if (postImages.length > 0) {
+                const uploadPromises = postImages.map(file => uploadApi.single(file));
+                const results = await Promise.all(uploadPromises);
+                imageUrls = results.map((r: any) => r.url);
+            }
+
+            if (editingPost) {
+                // Update existing post
+                await brandsApi.updatePost(brand._id, editingPost._id, {
+                    content: postContent,
+                    images: imageUrls.length > 0 ? imageUrls : editingPost.images,
+                    userId: user._id
+                });
+            } else {
+                // Create new post
+                await brandsApi.createPost(brand._id, {
+                    content: postContent,
+                    images: imageUrls,
+                    userId: user._id
+                });
+            }
+
+            resetPostForm();
+            fetchPosts();
+        } catch (err) {
+            console.error('Failed to create/update post:', err);
+        } finally {
+            setIsCreatingPost(false);
+        }
+    };
+
+    // Start editing a post
+    const handleEditPost = (post: any) => {
+        setEditingPost(post);
+        setPostContent(post.content);
+        setPostImagePreviews(post.images || []);
+        setShowPostModal(true);
+    };
+
+    // Delete post
+    const handleDeletePost = async (postId: string) => {
+        if (!brand?._id || !user?._id) return;
+        if (!confirm('Are you sure you want to delete this post?')) return;
+
+        try {
+            await brandsApi.deletePost(brand._id, postId, user._id);
+            fetchPosts();
+        } catch (err) {
+            console.error('Failed to delete post:', err);
         }
     };
 
@@ -558,7 +663,7 @@ export default function BrandDashboardPage() {
                                             Create Event
                                         </Button>
                                     </Link>
-                                    <Button variant="ghost" className="w-full justify-start">
+                                    <Button variant="ghost" className="w-full justify-start" onClick={() => setShowPostModal(true)}>
                                         <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                                         </svg>
@@ -574,8 +679,137 @@ export default function BrandDashboardPage() {
                             </div>
                         </div>
                     </div>
+
+                    {/* Posts Section */}
+                    <div className="mt-8">
+                        <div className="flex items-center justify-between mb-6">
+                            <h3 className="text-xl font-semibold text-white">Your Posts</h3>
+                            <Button onClick={() => setShowPostModal(true)}>
+                                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                                </svg>
+                                New Post
+                            </Button>
+                        </div>
+
+                        {posts.length === 0 ? (
+                            <div className="bg-white/[0.02] border border-white/[0.08] rounded-2xl p-12 text-center">
+                                <p className="text-gray-400">No posts yet. Create your first post!</p>
+                            </div>
+                        ) : (
+                            <div className="space-y-4">
+                                {posts.map((post: any) => (
+                                    <div key={post._id} className="bg-white/[0.02] border border-white/[0.08] rounded-2xl p-6">
+                                        <div className="flex justify-between items-start mb-4">
+                                            <div className="flex-1">
+                                                <p className="text-white whitespace-pre-wrap">{post.content}</p>
+                                                {post.isEdited && <span className="text-xs text-gray-500 mt-1">(edited)</span>}
+                                            </div>
+                                            <div className="flex gap-2 ml-4">
+                                                <button
+                                                    onClick={() => handleEditPost(post)}
+                                                    className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+                                                >
+                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                                    </svg>
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDeletePost(post._id)}
+                                                    className="p-2 text-gray-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+                                                >
+                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                    </svg>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        {post.images && post.images.length > 0 && (
+                                            <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mt-4">
+                                                {post.images.map((img: string, idx: number) => (
+                                                    <img key={idx} src={img} alt="" className="w-full h-32 object-cover rounded-lg" />
+                                                ))}
+                                            </div>
+                                        )}
+                                        <div className="flex items-center gap-4 mt-4 text-sm text-gray-500">
+                                            <span>{post.likes?.length || 0} likes</span>
+                                            <span>{new Date(post.createdAt).toLocaleDateString()}</span>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
                 </FadeIn>
             </div>
+
+            {/* Post Modal */}
+            {showPostModal && (
+                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div className="bg-zinc-900 border border-white/10 rounded-2xl w-full max-w-lg">
+                        <div className="p-6 border-b border-white/10">
+                            <h3 className="text-xl font-semibold text-white">
+                                {editingPost ? 'Edit Post' : 'Create Post'}
+                            </h3>
+                        </div>
+                        <div className="p-6 space-y-4">
+                            <textarea
+                                value={postContent}
+                                onChange={(e) => setPostContent(e.target.value)}
+                                placeholder="What's on your mind?"
+                                className="w-full h-32 px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-violet-500/50 resize-none"
+                            />
+
+                            {/* Image Previews */}
+                            {postImagePreviews.length > 0 && (
+                                <div className="grid grid-cols-3 gap-2">
+                                    {postImagePreviews.map((preview, idx) => (
+                                        <div key={idx} className="relative">
+                                            <img src={preview} alt="" className="w-full h-20 object-cover rounded-lg" />
+                                            <button
+                                                onClick={() => {
+                                                    setPostImagePreviews(prev => prev.filter((_, i) => i !== idx));
+                                                    setPostImages(prev => prev.filter((_, i) => i !== idx));
+                                                }}
+                                                className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center text-white text-xs"
+                                            >
+                                                ×
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
+                            {/* Add Images */}
+                            <label className="flex items-center gap-2 text-gray-400 hover:text-white cursor-pointer transition-colors">
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
+                                <span>Add Images</span>
+                                <input
+                                    type="file"
+                                    accept="image/*"
+                                    multiple
+                                    className="hidden"
+                                    onChange={handlePostImageAdd}
+                                />
+                            </label>
+                        </div>
+                        <div className="p-6 border-t border-white/10 flex justify-end gap-3">
+                            <Button variant="ghost" onClick={resetPostForm}>
+                                Cancel
+                            </Button>
+                            <Button
+                                onClick={handleCreatePost}
+                                disabled={isCreatingPost || !postContent.trim()}
+                            >
+                                {isCreatingPost ? 'Posting...' : (editingPost ? 'Update Post' : 'Create Post')}
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </DashboardLayout>
     );
 }
+

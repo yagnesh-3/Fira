@@ -135,15 +135,47 @@ export const brandsApi = {
             method: 'PUT',
             body: JSON.stringify(data),
         }),
+
+    // Follow/Unfollow
+    follow: (brandId: string, userId: string) =>
+        request(`/brands/${brandId}/follow`, {
+            method: 'POST',
+            body: JSON.stringify({ userId }),
+        }),
+    unfollow: (brandId: string, userId: string) =>
+        request(`/brands/${brandId}/follow`, {
+            method: 'DELETE',
+            body: JSON.stringify({ userId }),
+        }),
+    getFollowStatus: (brandId: string, userId: string) =>
+        request<{ isFollowing: boolean }>(`/brands/${brandId}/follow/status?userId=${userId}`),
+
+    // Posts
     getPosts: (id: string, params?: Record<string, string>) => {
         const query = params ? '?' + new URLSearchParams(params).toString() : '';
         return request(`/brands/${id}/posts${query}`);
     },
-    createPost: (id: string, data: unknown) =>
-        request(`/brands/${id}/posts`, {
+    createPost: (brandId: string, data: { content: string; images?: string[]; userId: string }) =>
+        request(`/brands/${brandId}/posts`, {
             method: 'POST',
             body: JSON.stringify(data),
         }),
+    updatePost: (brandId: string, postId: string, data: { content?: string; images?: string[]; userId: string }) =>
+        request(`/brands/${brandId}/posts/${postId}`, {
+            method: 'PUT',
+            body: JSON.stringify(data),
+        }),
+    deletePost: (brandId: string, postId: string, userId: string) =>
+        request(`/brands/${brandId}/posts/${postId}`, {
+            method: 'DELETE',
+            body: JSON.stringify({ userId }),
+        }),
+    toggleLike: (brandId: string, postId: string, userId: string) =>
+        request(`/brands/${brandId}/posts/${postId}/like`, {
+            method: 'POST',
+            body: JSON.stringify({ userId }),
+        }),
+
     getEvents: (id: string) => request(`/brands/${id}/events`),
 };
 

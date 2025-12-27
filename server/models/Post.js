@@ -1,9 +1,21 @@
 const mongoose = require('mongoose');
 
 const postSchema = new mongoose.Schema({
+    // Polymorphic - can be brand post or event post
     brand: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'BrandProfile',
+        default: null
+    },
+    event: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Event',
+        default: null
+    },
+    // Author of the post
+    author: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
         required: true
     },
     content: {
@@ -43,5 +55,14 @@ const postSchema = new mongoose.Schema({
 
 // Indexes
 postSchema.index({ brand: 1, createdAt: -1 });
+postSchema.index({ event: 1, createdAt: -1 });
+
+// Validation - must have either brand or event
+postSchema.pre('save', function (next) {
+    if (!this.brand && !this.event) {
+        return next(new Error('Post must belong to either a brand or an event'));
+    }
+    next();
+});
 
 module.exports = mongoose.model('Post', postSchema);

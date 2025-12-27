@@ -145,4 +145,96 @@ router.post('/:id/admin-approve', async (req, res) => {
     }
 });
 
+// =================== EVENT POST ROUTES ===================
+const postService = require('../services/postService');
+
+// GET /api/events/:id/posts - Get all posts for an event
+router.get('/:id/posts', async (req, res) => {
+    try {
+        const result = await postService.getEventPosts(req.params.id, req.query.page, req.query.limit);
+        res.json(result);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// POST /api/events/:id/posts - Create a post for an event
+router.post('/:id/posts', async (req, res) => {
+    const { userId, content, images } = req.body;
+    if (!userId) return res.status(400).json({ error: 'User ID required' });
+
+    try {
+        const post = await postService.createEventPost(req.params.id, userId, { content, images });
+        res.status(201).json(post);
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+});
+
+// PUT /api/events/:id/posts/:postId - Update an event post
+router.put('/:id/posts/:postId', async (req, res) => {
+    const { userId, content, images } = req.body;
+    if (!userId) return res.status(400).json({ error: 'User ID required' });
+
+    try {
+        const post = await postService.updateEventPost(req.params.postId, req.params.id, userId, { content, images });
+        res.json(post);
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+});
+
+// DELETE /api/events/:id/posts/:postId - Delete an event post
+router.delete('/:id/posts/:postId', async (req, res) => {
+    const { userId } = req.body;
+    if (!userId) return res.status(400).json({ error: 'User ID required' });
+
+    try {
+        const result = await postService.deleteEventPost(req.params.postId, req.params.id, userId);
+        res.json(result);
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+});
+
+// POST /api/events/:id/posts/:postId/like - Toggle like on a post
+router.post('/:id/posts/:postId/like', async (req, res) => {
+    const { userId } = req.body;
+    if (!userId) return res.status(400).json({ error: 'User ID required' });
+
+    try {
+        const result = await postService.toggleLike(req.params.postId, userId);
+        res.json(result);
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+});
+
+// POST /api/events/:id/posts/:postId/comments - Add comment to a post
+router.post('/:id/posts/:postId/comments', async (req, res) => {
+    const { userId, content } = req.body;
+    if (!userId || !content) return res.status(400).json({ error: 'User ID and content required' });
+
+    try {
+        const comments = await postService.addComment(req.params.postId, userId, content);
+        res.json({ comments });
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+});
+
+// DELETE /api/events/:id/posts/:postId/comments/:commentId - Delete a comment
+router.delete('/:id/posts/:postId/comments/:commentId', async (req, res) => {
+    const { userId } = req.body;
+    if (!userId) return res.status(400).json({ error: 'User ID required' });
+
+    try {
+        const result = await postService.deleteComment(req.params.postId, req.params.commentId, userId);
+        res.json(result);
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+});
+
 module.exports = router;
+
