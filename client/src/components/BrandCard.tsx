@@ -1,9 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Button } from './ui';
 import { motion } from 'framer-motion';
+import { useAuth } from '@/contexts/AuthContext';
+import { brandsApi } from '@/lib/api';
 
 interface BrandCardProps {
     brand: {
@@ -27,13 +29,43 @@ interface BrandCardProps {
 }
 
 export default function BrandCard({ brand, index = 0, onFollow }: BrandCardProps) {
-    const [isFollowing, setIsFollowing] = useState(false); // Todo: Init based on actual follow status
+    const { user } = useAuth();
+    const [isFollowing, setIsFollowing] = useState(false);
+    const [followersCount, setFollowersCount] = useState(brand.stats.followers);
 
-    const handleFollow = (e: React.MouseEvent) => {
+    useEffect(() => {
+        const initFollowStatus = async () => {
+            try {
+                if (!user?._id) return;
+                const status = await brandsApi.getFollowStatus(brand._id, user._id);
+                setIsFollowing(!!status.isFollowing);
+            } catch {
+                // ignore
+            }
+        };
+        initFollowStatus();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [user?._id, brand._id]);
+
+    const handleFollow = async (e: React.MouseEvent) => {
         e.preventDefault();
         e.stopPropagation();
-        setIsFollowing(!isFollowing);
-        if (onFollow) onFollow(brand._id);
+        if (!user?._id) return;
+
+        try {
+            if (isFollowing) {
+                await brandsApi.unfollow(brand._id, user._id);
+                setIsFollowing(false);
+                setFollowersCount(prev => Math.max(0, prev - 1));
+            } else {
+                await brandsApi.follow(brand._id, user._id);
+                setIsFollowing(true);
+                setFollowersCount(prev => prev + 1);
+            }
+            if (onFollow) onFollow(brand._id);
+        } catch {
+            // Optionally show toast, but keep UI consistent
+        }
     };
 
     const formatFollowers = (count: number) => {
@@ -118,7 +150,7 @@ export default function BrandCard({ brand, index = 0, onFollow }: BrandCardProps
 
                         <div className="flex items-center justify-between pt-3 border-t border-white/5">
                             <div className="flex gap-4 text-xs font-medium text-gray-400">
-                                <span>{formatFollowers(brand.stats.followers)} Followers</span>
+                                <span>{formatFollowers(followersCount)} Followers</span>
                                 <span>{brand.stats.events} Events</span>
                             </div>
 
