@@ -36,7 +36,29 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     });
     const [hasBrand, setHasBrand] = useState(false);
     const [hasVenues, setHasVenues] = useState(false);
-    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+    const [isClosing, setIsClosing] = useState(false);
+    const [isAnimating, setIsAnimating] = useState(false);
+
+    // Trigger opening animation
+    useEffect(() => {
+        if (isMobileSidebarOpen && !isClosing) {
+            // Small delay to ensure the element is mounted before animating
+            const timer = setTimeout(() => setIsAnimating(true), 10);
+            return () => clearTimeout(timer);
+        } else {
+            setIsAnimating(false);
+        }
+    }, [isMobileSidebarOpen, isClosing]);
+
+    const closeMobileSidebar = () => {
+        setIsClosing(true);
+        setIsAnimating(false);
+        setTimeout(() => {
+            setIsMobileSidebarOpen(false);
+            setIsClosing(false);
+        }, 300); // Match animation duration
+    };
 
     // Persist sidebar state
     useEffect(() => {
@@ -144,39 +166,64 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[400px] h-[200px] bg-gradient-to-b from-white/20 via-white/3 to-transparent blur-3xl"></div>
             </div>
 
-            {/* Main Navbar */}
+            {/* Main Navbar - Hidden on mobile, shown on desktop */}
             <Navbar />
 
-            {/* Mobile Header - Under the floating navbar */}
-            <div className="fixed top-[72px] left-0 right-0 z-30 lg:hidden">
-                <div className="mx-4 px-4 py-3 flex items-center gap-3 bg-black/80 backdrop-blur-sm border border-white/10 rounded-full">
-                    <button
-                        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                        className="w-10 h-10 rounded-full bg-gradient-to-br from-violet-500 to-pink-500 flex items-center justify-center shadow-lg shadow-violet-500/30"
-                    >
-                        <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            {isMobileMenuOpen ? (
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                            ) : (
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                            )}
-                        </svg>
-                    </button>
-                    <span className="text-white font-semibold">Welcome, {user?.name?.split(' ')[0] || 'User'}</span>
-                </div>
-            </div>
+            {/* Mobile Menu Button - Floating */}
+            {!isMobileSidebarOpen && (
+                <button
+                    onClick={() => setIsMobileSidebarOpen(true)}
+                    className="fixed top-4 left-4 z-50 lg:hidden w-12 h-12 rounded-full bg-gradient-to-br from-violet-500 to-pink-500 flex items-center justify-center shadow-lg shadow-violet-500/30 transition-all duration-300 hover:scale-110"
+                >
+                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                    </svg>
+                </button>
+            )}
 
-            {/* Mobile Sidebar Overlay */}
-            {isMobileMenuOpen && (
-                <div className="fixed inset-0 z-40 lg:hidden" style={{ top: '140px' }}>
+            {/* Mobile Sidebar Drawer */}
+            {isMobileSidebarOpen && (
+                <div className="fixed inset-0 z-40 lg:hidden">
                     {/* Backdrop */}
                     <div
-                        className="absolute inset-0 bg-black/60"
-                        onClick={() => setIsMobileMenuOpen(false)}
+                        className={`absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-300 ${isAnimating ? 'opacity-100' : 'opacity-0'}`}
+                        onClick={closeMobileSidebar}
                     />
 
-                    {/* Mobile Sidebar - 3/4 width */}
-                    <aside className="absolute left-0 top-0 bottom-0 w-3/4 bg-black/95 backdrop-blur-xl border-r border-white/[0.08] flex flex-col">
+                    {/* Sidebar Drawer - Slide from left */}
+                    <aside className={`absolute left-0 top-0 bottom-0 w-3/4 max-w-sm bg-black/95 backdrop-blur-xl border-r border-white/10 flex flex-col shadow-2xl transform transition-transform duration-300 ease-out ${isAnimating ? 'translate-x-0' : '-translate-x-full'}`}>
+                        {/* Header */}
+                        <div className="p-4 border-b border-white/10 flex items-center justify-between">
+                            <Link href="/" className="flex items-center">
+                                <img
+                                    src="/logo white.png"
+                                    alt="FIRA"
+                                    className="w-10 h-10 object-contain"
+                                />
+                            </Link>
+                            <button
+                                onClick={closeMobileSidebar}
+                                className="text-gray-400 hover:text-white p-2 transition-colors"
+                            >
+                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+
+                        {/* User Info */}
+                        <div className="p-4 border-b border-white/10">
+                            <div className="flex items-center gap-3">
+                                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-violet-500 to-pink-500 flex items-center justify-center text-white font-medium shadow-lg shadow-violet-500/25">
+                                    {user?.name?.charAt(0).toUpperCase() || 'U'}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <div className="text-sm font-medium text-white truncate">{user?.name || 'User'}</div>
+                                    <div className="text-xs text-gray-400 truncate">{user?.email}</div>
+                                </div>
+                            </div>
+                        </div>
+
                         {/* Navigation */}
                         <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
                             {navItems.map((item) => {
@@ -185,10 +232,10 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                                     <Link
                                         key={item.href}
                                         href={item.href}
-                                        onClick={() => setIsMobileMenuOpen(false)}
+                                        onClick={closeMobileSidebar}
                                         className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 ${isActive
                                             ? 'bg-white text-black shadow-lg'
-                                            : 'text-gray-400 hover:bg-white/[0.06] hover:text-white'
+                                            : 'text-gray-400 hover:bg-white/10 hover:text-white'
                                             }`}
                                     >
                                         <span className="w-5 h-5">{getIcon(item.icon)}</span>
@@ -208,10 +255,10 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                                             <Link
                                                 key={item.href}
                                                 href={item.href}
-                                                onClick={() => setIsMobileMenuOpen(false)}
+                                                onClick={closeMobileSidebar}
                                                 className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 ${isActive
                                                     ? 'bg-gradient-to-r from-violet-500/20 to-pink-500/20 text-violet-300 border border-violet-500/30'
-                                                    : 'text-gray-400 hover:bg-white/[0.06] hover:text-white'
+                                                    : 'text-gray-400 hover:bg-white/10 hover:text-white'
                                                     }`}
                                             >
                                                 <span className="w-5 h-5">{getIcon(item.icon)}</span>
@@ -229,10 +276,10 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                                     </div>
                                     <Link
                                         href="/dashboard/brand"
-                                        onClick={() => setIsMobileMenuOpen(false)}
+                                        onClick={closeMobileSidebar}
                                         className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 ${pathname.startsWith('/dashboard/brand')
                                             ? 'bg-gradient-to-r from-cyan-500/20 to-blue-500/20 text-cyan-300 border border-cyan-500/30'
-                                            : 'text-gray-400 hover:bg-white/[0.06] hover:text-white'
+                                            : 'text-gray-400 hover:bg-white/10 hover:text-white'
                                             }`}
                                     >
                                         <span className="w-5 h-5">{getIcon('sparkles')}</span>
@@ -243,14 +290,14 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                         </nav>
 
                         {/* Logout */}
-                        <div className="p-3 border-t border-white/[0.08] bg-black/20">
+                        <div className="p-3 border-t border-white/10 bg-black/20">
                             <button
                                 onClick={() => {
                                     localStorage.removeItem('fira_token');
                                     localStorage.removeItem('fira_user');
                                     window.location.href = '/signin';
                                 }}
-                                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-red-400 hover:bg-red-500/10"
+                                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-red-400 hover:bg-red-500/10 transition-colors"
                             >
                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
@@ -401,7 +448,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             </aside>
 
             {/* Main Content */}
-            <main className={`flex-1 min-h-screen relative z-10 pt-[140px] lg:pt-20 transition-all duration-300 ${isExpanded ? 'lg:ml-64' : 'lg:ml-20'
+            <main className={`flex-1 min-h-screen relative z-10 pt-4 pb-20 lg:pb-0 lg:pt-20 transition-all duration-300 ${isExpanded ? 'lg:ml-64' : 'lg:ml-20'
                 }`}>
                 {children}
             </main>
