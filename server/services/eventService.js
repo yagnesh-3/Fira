@@ -482,6 +482,10 @@ const eventService = {
         const venue = await Venue.findById(venueId);
         if (!venue) return;
 
+        // Ensure arrays exist to avoid runtime errors on older docs
+        if (!Array.isArray(venue.daySlots)) venue.daySlots = [];
+        if (!Array.isArray(venue.blockedDates)) venue.blockedDates = [];
+
         // Get all dates between event start and end
         const startDate = new Date(event.date);
         startDate.setHours(0, 0, 0, 0); // Reset to start of day
